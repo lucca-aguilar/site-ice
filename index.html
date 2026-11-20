@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ENE0066 • Plano Estratégico de Recuperação Acadêmica (UnB)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chosen Palette: Warm Stone & Deep Teal Harmony (#faf8f5 background, #ffffff cards, #0f766e primary teal, #d97706 warm amber accent) -->
+  <!-- Application Structure Plan: Designed as a task-oriented interactive study cockpit organized into 6 thematic views (1. Painel & Simulador de Notas, 2. Cronograma 21 Dias Just-in-Time, 3. Catálogo 138 Questões & Auditoria, 4. Sequências & Categorias A/B/C, 5. Manual Técnico & Protocolo 20min, 6. Matriz de Domínio & Simulados). Rather than forcing linear reading of a dense document, this architecture lets the student immediately simulate grade targets (P3 + Sub >= 12.5), execute each daily 120-min study block with localStorage persistence, filter all 138 exercises with errata alerts and twin-circuit cross-checks, and consult missing lecture algorithms (Nodal, Mesh, Op-Amp) on demand. -->
+  <!-- Visualization & Content Choices: 1. Grade Frontier Line/Bar Chart (Chart.js Canvas) -> Goal: Inform & Simulate -> Shows required Substitutiva grade vs P3 grade to reach MM (5.0) and MS (7.0) -> Interactive sliders update chart marker and diagnostic live. 2. 138 Questions Priority Stacked Bar Chart (Chart.js Canvas) -> Goal: Compare & Organize -> Visualizes Priority 1/2/3 distribution across Lists 1, 2, 3 -> Filterable catalog below. 3. 8-Step Problem Resolution Donut Chart (Chart.js Canvas) -> Goal: Inform -> Breaks down the realistic 22-minute anatomy of solving a circuit problem -> Paired with interactive 20-Minute Stuck Diagnostic Matrix. 4. HTML/CSS/Tailwind Interactive Cards, Tables, Tabs, and LocalStorage Checklists -> Used for all diagrams, learning sequences, decision matrices, and study tracking. -->
+  <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+  <style>
+    body {
+      background-color: #faf8f5;
+      color: #1c1917;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .chart-container {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+      height: 280px;
+      max-height: 360px;
+    }
+    @media (min-width: 768px) {
+      .chart-container {
+        height: 320px;
+      }
+    }
+    .tab-btn-active {
+      background-color: #0f766e;
+      color: #ffffff;
+      border-color: #0f766e;
+    }
+    .tab-btn-inactive {
+      background-color: #ffffff;
+      color: #44403c;
+      border-color: #e7e5e4;
+    }
+    .tab-btn-inactive:hover {
+      background-color: #f5f5f4;
+      color: #0f766e;
+    }
+    .formula-box {
+      background-color: #f5f5f4;
+      border-left: 4px solid #0f766e;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-teal-100 selection:text-teal-900">
+
+  <header class="bg-white border-b border-stone-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-700 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+            ⚡
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h1 class="text-lg sm:text-xl font-bold text-stone-900 tracking-tight">ENE0066 • Plano Estratégico de Aprovação</h1>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">UnB • 2026.2</span>
+            </div>
+            <p class="text-xs text-stone-500">Recuperação Integrada Just-in-Time • P3 (02/12) &amp; Substitutiva A4 (09/12)</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 text-xs">
+          <div class="bg-stone-100 border border-stone-200 rounded-lg px-3 py-1.5">
+            <span class="text-stone-500">Meta Combinada:</span>
+            <strong class="text-teal-800 font-bold ml-1">P3 + Sub ≥ 12,5 pts</strong>
+          </div>
+          <div class="bg-teal-50 border border-teal-200 rounded-lg px-3 py-1.5">
+            <span class="text-teal-700">Progresso Geral:</span>
+            <strong id="globalProgressBadge" class="text-teal-900 font-bold ml-1">0%</strong>
+          </div>
+        </div>
+      </div>
+
+      <nav class="flex overflow-x-auto gap-1.5 pb-2.5 pt-1 no-scrollbar" aria-label="Navegação Principal">
+        <button data-view="dashboard" class="nav-tab tab-btn-active px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition whitespace-nowrap">
+          📊 1. Simulador &amp; Estratégia
+        </button>
+        <button data-view="schedule" class="nav-tab tab-btn-inactive px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition whitespace-nowrap">
+          📅 2. Cronograma 21 Dias
+        </button>
+        <button data-view="catalog" class="nav-tab tab-btn-inactive px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition whitespace-nowrap">
+          📚 3. Catálogo 138 Questões &amp; Errata
+        </button>
+        <button data-view="architecture" class="nav-tab tab-btn-inactive px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition whitespace-nowrap">
+          🧭 4. Pré-Requisitos &amp; Cat. A/B/C
+        </button>
+        <button data-view="manual" class="nav-tab tab-btn-inactive px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition whitespace-nowrap">
+          🛠️ 5. Manual Técnico &amp; Protocolo 20m
+        </button>
+        <button data-view="tracker" class="nav-tab tab-btn-inactive px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition whitespace-nowrap">
+          🎯 6. Matriz de Domínio &amp; Simulados
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <!-- VIEW 1: DASHBOARD & GRADE SIMULATOR -->
+    <section id="view-dashboard" class="view-section space-y-6">
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold text-stone-900 mb-2">Visão Geral &amp; Engenharia Matemática da Aprovação</h2>
+        <p class="text-sm text-stone-600 leading-relaxed">
+          Esta seção sintetiza a viabilidade matemática da sua aprovação na disciplina <strong>Introdução aos Circuitos Elétricos (ENE0066)</strong> conforme o Plano de Ensino oficial (2026.2) e o Regimento Geral da UnB. Como as suas notas atuais são <strong>P1 = 2,5</strong> e <strong>P2 = 0,0</strong>, a aprovação direta apenas com a P3 é matematicamente impossível (nota 10,0 resultaria em média 4,17 — menção MI). Entretanto, como a <strong>Avaliação Substitutiva (A4, em 09/12/2026)</strong> substitui automaticamente a menor nota (P2 = 0,0), a sua aprovação com menção <strong>MM (Média ≥ 5,0)</strong> exige exatamente que a soma das duas próximas provas atinja <strong>P3 + Sub ≥ 12,5 pontos</strong>. Utilize o simulador interativo abaixo para testar cenários de desempenho e visualizar a fronteira de aprovação.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wider text-stone-400">Histórico Atual</div>
+          <div class="mt-1 flex items-baseline gap-3">
+            <span class="text-2xl font-bold text-stone-900">P1: 2,5</span>
+            <span class="text-lg font-bold text-rose-600">P2: 0,0</span>
+          </div>
+          <p class="mt-1 text-xs text-stone-500">P2 = 0,0 será substituída pela nota da A4 (09/12).</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wider text-stone-400">Avaliação 3 (P3)</div>
+          <div class="mt-1 text-2xl font-bold text-teal-700">02/12/2026</div>
+          <p class="mt-1 text-xs text-stone-500">Etapa 1: 15 dias (17/11 a 01/12) • Meta padrão: <strong>6,5 pts</strong>.</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wider text-stone-400">Substitutiva (A4)</div>
+          <div class="mt-1 text-2xl font-bold text-amber-600">09/12/2026</div>
+          <p class="mt-1 text-xs text-stone-500">Etapa 2: 6 dias (03/12 a 08/12) • Meta padrão: <strong>6,0 pts</strong>.</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-stone-200 p-4 shadow-sm">
+          <div class="text-xs font-semibold uppercase tracking-wider text-stone-400">Carga Diária Planejada</div>
+          <div class="mt-1 text-2xl font-bold text-stone-900">2h00 <span class="text-sm font-normal text-stone-500">(+1h flex.)</span></div>
+          <p class="mt-1 text-xs text-stone-500">3 a 5 questões-chave/dia • Frequência mínima SIGAA: <strong>75%</strong>.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-5">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-base font-bold text-stone-900">🧮 Simulador Interativo de Notas</h3>
+              <span class="text-xs font-medium px-2 py-0.5 rounded bg-stone-100 text-stone-600">Nf = (2,5 + P3 + Sub) / 3</span>
+            </div>
+            <p class="text-xs text-stone-500 mb-4">Arraste os controles para simular suas notas na P3 e na Substitutiva e verificar a menção final.</p>
+
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between text-sm font-semibold mb-1">
+                  <label for="sliderP3" class="text-stone-700">Nota Projetada na P3 (02/12):</label>
+                  <span id="valP3" class="text-teal-700 font-bold">6,5</span>
+                </div>
+                <input id="sliderP3" type="range" min="0" max="10" step="0.5" value="6.5" class="w-full accent-teal-700 cursor-pointer" />
+                <div class="flex justify-between text-[11px] text-stone-400 mt-0.5">
+                  <span>0,0</span>
+                  <span>2,5 (mín. viável)</span>
+                  <span>6,5 (meta)</span>
+                  <span>10,0</span>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-sm font-semibold mb-1">
+                  <label for="sliderSub" class="text-stone-700">Nota Projetada na Substitutiva (09/12):</label>
+                  <span id="valSub" class="text-amber-600 font-bold">6,0</span>
+                </div>
+                <input id="sliderSub" type="range" min="0" max="10" step="0.5" value="6.0" class="w-full accent-amber-600 cursor-pointer" />
+                <div class="flex justify-between text-[11px] text-stone-400 mt-0.5">
+                  <span>0,0</span>
+                  <span>5,0</span>
+                  <span>6,0 (meta)</span>
+                  <span>10,0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-stone-50 rounded-xl border border-stone-200 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-stone-500 uppercase">Média Sem Substitutiva:</span>
+              <span id="avgNoSub" class="text-sm font-bold text-rose-600">3,00 (MI - Reprovado)</span>
+            </div>
+            <div class="flex items-center justify-between border-t border-stone-200 pt-2.5">
+              <span class="text-xs font-semibold text-stone-700 uppercase">Média Final Com Substitutiva:</span>
+              <span id="avgWithSub" class="text-xl font-extrabold text-teal-800">5,00</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-stone-500 uppercase">Menção Final UnB:</span>
+              <span id="mencaoBadge" class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-100 text-emerald-800">MM • APROVADO</span>
+            </div>
+            <p id="simDiagnostic" class="text-xs text-stone-600 leading-relaxed border-t border-stone-200 pt-2.5">
+              Com <strong>P3 = 6,5</strong>, você precisa de no mínimo <strong>6,0 na Substitutiva</strong> para atingir média 5,0 (MM).
+            </p>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-bold text-stone-900">Fronteira Matemática de Aprovação (P3 vs. Substitutiva)</h3>
+            <p class="text-xs text-stone-500 mt-0.5 mb-3">
+              A linha verde indica a nota mínima na Substitutiva para aprovação (<strong>MM ≥ 5,0</strong>); a linha âmbar indica a fronteira para <strong>MS ≥ 7,0</strong>. Qualquer ponto acima da linha verde garante aprovação.
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="gradeChart"></canvas>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-rose-50 border border-rose-200 rounded-lg p-2">
+              <div class="font-bold text-rose-800">P3 &lt; 2,5</div>
+              <div class="text-rose-600">Reprovação antecipada</div>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+              <div class="font-bold text-emerald-800">P3 = 6,5 | Sub = 6,0</div>
+              <div class="text-emerald-700">Meta Padrão (MM = 5,0)</div>
+            </div>
+            <div class="bg-teal-50 border border-teal-200 rounded-lg p-2">
+              <div class="font-bold text-teal-800">P3 = 7,5 | Sub = 5,0</div>
+              <div class="text-teal-700">Folga na Substitutiva</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+        <h3 class="text-base font-bold text-stone-900 mb-3">Tabela Completa de Cenários de Recuperação (P1 = 2,5 | P2 = 0,0)</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-stone-100 text-stone-700 border-b border-stone-200">
+                <th class="py-2.5 px-3 font-semibold">Nota na P3 (02/12)</th>
+                <th class="py-2.5 px-3 font-semibold">Mín. na Sub p/ MM (≥ 5,0)</th>
+                <th class="py-2.5 px-3 font-semibold">Mín. na Sub p/ MS (≥ 7,0)</th>
+                <th class="py-2.5 px-3 font-semibold">Diagnóstico Estratégico</th>
+              </tr>
+            </thead>
+            <tbody id="scenariosTableBody" class="divide-y divide-stone-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: 21-DAY INTERACTIVE SCHEDULE -->
+    <section id="view-schedule" class="view-section hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold text-stone-900 mb-2">Cronograma Diário de 21 Dias • Recuperação Integrada Just-in-Time</h2>
+        <p class="text-sm text-stone-600 leading-relaxed">
+          Esta seção organiza toda a sua rotina de estudos de <strong>17/11/2026 a 08/12/2026</strong>. Na <strong>Etapa 1 (Dias 01 a 15)</strong>, você inicia imediatamente pelos conteúdos da P3 (Superposição, Thévenin, Norton, Máxima Potência e Amp-Ops), recuperando os pré-requisitos de Categoria A de P1 e P2 nos primeiros 30 minutos de cada sessão. Na <strong>Etapa 2 (Dias 16 a 21)</strong>, você domina os tópicos de Categorias B e C adiados (Transformação Y–Δ, gráficos/integrais de energia, Tellegen, Supernó e Supermalha avançados) para a Substitutiva. Clique nos dias para abrir o roteiro detalhado e marque as tarefas concluídas.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 space-y-4">
+          <div class="bg-white rounded-2xl border border-stone-200 p-4 shadow-sm space-y-3">
+            <div class="flex flex-wrap gap-2">
+              <button data-stage="all" class="stage-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-700 text-white">Todos (21 Dias)</button>
+              <button data-stage="1" class="stage-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-100 text-stone-700 hover:bg-stone-200">Etapa 1: P3 (Dias 1–15)</button>
+              <button data-stage="2" class="stage-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-100 text-stone-700 hover:bg-stone-200">Etapa 2: Sub (Dias 16–21)</button>
+            </div>
+            <div id="daysListContainer" class="space-y-2 max-h-[540px] overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-5">
+          <div id="dayDetailCard" class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-4"></div>
+
+          <div class="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm">
+            <h3 class="text-sm font-bold text-stone-900 mb-1">Distribuição Diária de Tempo: Núcleo Essencial vs. Margem Flexível</h3>
+            <p class="text-xs text-stone-500 mb-3">
+              Núcleo diário calibrado em 120–135 minutos (com redução leve nas vésperas Dia 15 e Dia 21) e margem flexível para absorver questões complexas sem efeito bola de neve.
+            </p>
+            <div class="chart-container">
+              <canvas id="scheduleChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: 138 QUESTIONS CATALOG & AUDIT -->
+    <section id="view-catalog" class="view-section hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold text-stone-900 mb-2">Catálogo Auditado das 138 Questões &amp; Errata das Listas</h2>
+        <p class="text-sm text-stone-600 leading-relaxed">
+          Aqui estão catalogadas e classificadas todas as <strong>138 questões</strong> das três listas oficiais (Lista 1: 40; Lista 2: 42; Lista 3: 56). Filtre por lista, prioridade estratégica, dificuldade ou agrupamento tático (circuitos gêmeos entre listas, questões-ponte, treino sem consulta e itens adiáveis para a Etapa 2). Consulte também o painel de <strong>Auditoria Documental</strong> para corrigir erros tipográficos dos PDFs originais e aproveitar os gabaritos ocultos nos slides.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-6 bg-white rounded-2xl border border-stone-200 p-5 shadow-sm">
+          <h3 class="text-sm font-bold text-stone-900 mb-1">Distribuição das 138 Questões por Lista e Prioridade</h3>
+          <p class="text-xs text-stone-500 mb-3">
+            44 questões de Prioridade Máxima formam o núcleo vital da Etapa 1; 46 de Prioridade Alta consolidam a fluência; 48 Complementares alimentam a Etapa 2.
+          </p>
+          <div class="chart-container">
+            <canvas id="catalogChart"></canvas>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-bold text-amber-800 flex items-center gap-1.5">⚠️ Auditoria Documental: 6 Correções &amp; Gabaritos Ocultos</h3>
+              <button id="toggleAuditBtn" class="text-xs font-semibold text-teal-700 hover:underline">Ver Circuitos Gêmeos</button>
+            </div>
+            <div id="auditErrataBox" class="space-y-2 text-xs text-stone-700 max-h-[260px] overflow-y-auto pr-1">
+              <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <strong>1. Lista 1 Q35 (pág. 13):</strong> Enunciado omitido e resistor sem número. Pelo Slide 37/49 da Aula 4 (Ex. 14), pede-se <em>v₁ e v₂</em> e o resistor sob <em>v₂</em> vale <strong>30 Ω</strong>.
+              </div>
+              <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <strong>2. Lista 1 Q32 (pág. 12):</strong> Texto pede "corrente V<sub>A</sub>", mas a Fig. 30 mostra polaridade aberta (+ e -). Trata-se da <strong>tensão V<sub>A</sub></strong>.
+              </div>
+              <div class="p-2.5 rounded-lg bg-stone-50 border border-stone-200">
+                <strong>3. Lista 1 (Q5 a Q40):</strong> Como Q3 e Q4 não têm figuras, o número da figura é sempre igual ao número da questão menos 2 (ex.: Q22 = Fig. 20).
+              </div>
+              <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <strong>4. Lista 3 Q2 e Q4 (págs. 1–2):</strong> São <strong>duplicatas idênticas</strong> (12 V, 6 V, 6 mA, quatro resistores de 6 kΩ). Use Q2 no Dia 2 e Q4 como teste cego no Dia 13.
+              </div>
+              <div class="p-2.5 rounded-lg bg-stone-50 border border-stone-200">
+                <strong>5. Lista 3 Q16 (pág. 7):</strong> Menciona "Fig. 15", mas refere-se à caixa-preta da <strong>Fig. 16</strong> logo abaixo da questão.
+              </div>
+              <div class="p-2.5 rounded-lg bg-stone-50 border border-stone-200">
+                <strong>6. Slides Técnicas Adicionais:</strong> No Ex. 2 (Slide 9/34), leia-se <strong>V<sub>o</sub> = 5/3 V</strong> (e não mA). No Ex. 6 (Slide 23/34), "Fig. 13" refere-se à <strong>Fig. 10</strong>.
+              </div>
+            </div>
+            <div id="auditTwinsBox" class="hidden space-y-2 text-xs text-stone-700 max-h-[260px] overflow-y-auto pr-1">
+              <div class="p-2.5 rounded-lg bg-teal-50 border border-teal-200">
+                <strong>Gabaritos Ocultos nos Slides Aula 4:</strong> L1 Q13 = Ex. 11 (Slide 30) • L1 Q14 = Ex. 12 (Slide 31) • L1 Q18 = Ex. 7 (Slide 24) • L1 Q21 = Ex. 15 (Slide 38) • L1 Q22 = Ex. 18 (Slide 41: <strong>12 kΩ</strong>) • L1 Q35 = Ex. 14 (Slide 37).
+              </div>
+              <div class="p-2.5 rounded-lg bg-teal-50 border border-teal-200">
+                <strong>Pares Gêmeos entre Listas (Validação Cruzada):</strong><br/>
+                • <strong>L2 Q11 = L3 Q13</strong> (Nodal vs. Thévenin)<br/>
+                • <strong>L2 Q13 = L3 Q14</strong> (Nodal vs. Thévenin)<br/>
+                • <strong>L2 Q20 = L3 Q28</strong> (Nodal c/ fonte dep. vs. Thévenin)<br/>
+                • <strong>L2 Q24 = L3 Q32</strong> (Rede 5 nós vs. Thévenin)<br/>
+                • <strong>L2 Q25 = L3 Q35</strong> (3 Malhas vs. Máxima Potência)<br/>
+                • <strong>L2 Q30 = L3 Q21</strong> (Malhas vs. Norton)<br/>
+                • <strong>L3 Q15 = L3 Q24</strong> (Thévenin vs. Norton no mesmo circuito)
+              </div>
+            </div>
+          </div>
+          <div class="text-[11px] text-stone-500 bg-stone-50 p-2.5 rounded-lg border border-stone-200">
+            <strong>Dica de Ouro:</strong> Resolva os pares gêmeos acima para confirmar matematicamente suas respostas sem precisar de gabarito externo.
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Buscar Questão / Tema</label>
+            <input id="qSearchInput" type="text" placeholder="Ex: Q28, Supernó, Amp-Op, 12 kΩ..." class="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg focus:outline-none focus:border-teal-600" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Lista de Exercícios</label>
+            <select id="qListFilter" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-600">
+              <option value="ALL">Todas as Listas (138)</option>
+              <option value="L1">Lista 1 • Mód. 1 / P1 (40)</option>
+              <option value="L2">Lista 2 • Mód. 2 / P2 (42)</option>
+              <option value="L3">Lista 3 • Mód. 3 / P3 (56)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Prioridade Estratégica</label>
+            <select id="qPrioFilter" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-600">
+              <option value="ALL">Todas as Prioridades</option>
+              <option value="1">1. Prioridade Máxima (44)</option>
+              <option value="2">2. Prioridade Alta (46)</option>
+              <option value="3">3. Complementar / Sub (48)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Dificuldade</label>
+            <select id="qDiffFilter" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-600">
+              <option value="ALL">Todas</option>
+              <option value="Fácil">Fácil</option>
+              <option value="Médio">Médio</option>
+              <option value="Difícil">Difícil</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Agrupamento Tático</label>
+            <select id="qTagFilter" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg bg-white focus:outline-none focus:border-teal-600">
+              <option value="ALL">Todos os Agrupamentos</option>
+              <option value="gemeo">Circuitos Gêmeos / Gabarito Slide</option>
+              <option value="ponte">Questões-Ponte Integradoras</option>
+              <option value="sem_consulta">Refazer Sem Consulta</option>
+              <option value="adiar_sub">Adiáveis p/ Etapa 2 (Sub)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-stone-500 border-b border-stone-200 pb-2">
+          <span id="catalogCountLabel">Exibindo 138 de 138 questões</span>
+          <span id="catalogDoneLabel" class="font-semibold text-teal-700">0 concluídas</span>
+        </div>
+
+        <div class="overflow-x-auto max-h-[560px] overflow-y-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-stone-100 text-stone-700 sticky top-0 z-10 border-b border-stone-200">
+              <tr>
+                <th class="py-2.5 px-2.5 font-semibold w-10 text-center">Feita</th>
+                <th class="py-2.5 px-2.5 font-semibold w-28">Questão (Fig.)</th>
+                <th class="py-2.5 px-2.5 font-semibold">Conteúdo &amp; Pré-Requisitos</th>
+                <th class="py-2.5 px-2.5 font-semibold w-20">Dific.</th>
+                <th class="py-2.5 px-2.5 font-semibold w-20">Tempo</th>
+                <th class="py-2.5 px-2.5 font-semibold w-36">Prioridade</th>
+                <th class="py-2.5 px-2.5 font-semibold">Justificativa &amp; Dica</th>
+              </tr>
+            </thead>
+            <tbody id="catalogTableBody" class="divide-y divide-stone-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: ARCHITECTURE & PREREQUISITES A/B/C -->
+    <section id="view-architecture" class="view-section hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold text-stone-900 mb-2">Arquitetura de Pré-Requisitos, Sequências Lógicas &amp; Categorias A / B / C</h2>
+        <p class="text-sm text-stone-600 leading-relaxed">
+          Para sair do domínio inicial nulo sem desperdiçar os dias preciosos antes da P3, todo o conteúdo de P1 e P2 foi auditado e separado em três categorias estratégicas: <strong>Categoria A</strong> (indispensáveis para resolver a P3, injetados nos Dias 1 a 10), <strong>Categoria B</strong> (importantes para versatilidade, consolidados nos Dias 4, 6, 18 e 19) e <strong>Categoria C</strong> (independentes da P3, adiados com segurança para a Etapa 2 da Substitutiva). Explore abaixo as 5 cadeias de aprendizagem e a anatomia temporal de uma resolução.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="bg-white rounded-2xl border-2 border-teal-600 p-5 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-teal-100 text-teal-800">CATEGORIA A • CRÍTICA</span>
+            <span class="text-xs font-semibold text-teal-700">Etapa 1 (Dias 1–10)</span>
+          </div>
+          <h3 class="text-base font-bold text-stone-900">Indispensáveis para a P3</h3>
+          <p class="text-xs text-stone-600">Sem estes fundamentos, não é possível equacionar a Lista 3. São estudados imediatamente antes de cada técnica da P3.</p>
+          <ul class="text-xs text-stone-700 space-y-1.5 list-disc pl-4">
+            <li><strong>SI &amp; Ohm:</strong> Prefixos (kΩ × mA = V), curto (R=0), aberto (R→∞), potência.</li>
+            <li><strong>Kirchhoff &amp; Divisores:</strong> Nós, malhas, LKC, LKT, série/paralelo, divisores de tensão e corrente.</li>
+            <li><strong>Fontes Dependentes:</strong> Os 4 tipos (FTCT, FTCC, FCCT, FCCC) e variáveis de controle.</li>
+            <li><strong>Análise Nodal Padrão:</strong> LKC nodal, nós de tensão fixa no terra e sistemas 2×2.</li>
+            <li><strong>Análise de Malhas Padrão:</strong> LKT em 2–3 malhas e fontes de corrente na periferia.</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-amber-300 p-5 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-800">CATEGORIA B • CONSOLIDAÇÃO</span>
+            <span class="text-xs font-semibold text-amber-700">Dias 4, 6 &amp; Etapa 2</span>
+          </div>
+          <h3 class="text-base font-bold text-stone-900">Versatilidade &amp; Velocidade</h3>
+          <p class="text-xs text-stone-600">Não travam os blocos básicos da P3, mas ampliam o repertório para circuitos flutuantes e blindam a P2 na Substitutiva.</p>
+          <ul class="text-xs text-stone-700 space-y-1.5 list-disc pl-4">
+            <li><strong>Supernó:</strong> Fonte de tensão flutuante entre dois nós não-referência (L2 Q8).</li>
+            <li><strong>Supermalha:</strong> Fonte de corrente compartilhada entre duas malhas (L2 Q29).</li>
+            <li><strong>Condutâncias:</strong> Uso de Siemens (S) na Lei de Ohm nodal (i = GΔV, L2 Q12).</li>
+            <li><strong>Análise Regressiva:</strong> Achar a fonte a partir de uma grandeza interna conhecida.</li>
+            <li><strong>Sistemas 3×3 Densos:</strong> Múltiplas fontes controladas cruzadas (L2 Q38).</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-stone-200 text-stone-700">CATEGORIA C • ADIÁVEL</span>
+            <span class="text-xs font-semibold text-stone-600">Exclusivo Etapa 2 (Dias 16–20)</span>
+          </div>
+          <h3 class="text-base font-bold text-stone-900">Independentes da P3</h3>
+          <p class="text-xs text-stone-600">Cobrados apenas na P1 ou questões específicas da P2, sem aplicação na Lista 3. Adiados para proteger a P3.</p>
+          <ul class="text-xs text-stone-700 space-y-1.5 list-disc pl-4">
+            <li><strong>Transformações Y–Δ e Δ–Y:</strong> Pontes resistivas (L1 Q24c/d, Q33, Q36, Q37).</li>
+            <li><strong>Cálculo &amp; Gráficos no Tempo:</strong> Derivadas e integrais de q(t), i(t), p(t) e w(t) (L1 Q1–Q5).</li>
+            <li><strong>Teorema de Tellegen:</strong> Balanço global de potência ∑Pᵢ = 0 em caixas genéricas (L1 Q6–Q9) e redes de 4–5 malhas (L2 Q41–Q42).</li>
+            <li><strong>Sistemas de 5 Nós:</strong> Redes nodais extensas com múltiplos supernós (L2 Q24).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-3">
+          <h3 class="text-base font-bold text-stone-900">As 5 Sequências Obrigatórias de Aprendizagem (Do Zero à P3)</h3>
+          <p class="text-xs text-stone-500">Clique em cada sequência para visualizar a trilha exata do pré-requisito até a habilidade cobrada na P3.</p>
+          <div id="sequencesAccordion" class="space-y-2.5"></div>
+        </div>
+
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-bold text-stone-900">Anatomia Realista de 1 Questão (22 min)</h3>
+            <p class="text-xs text-stone-500 mt-0.5 mb-3">
+              Decomposição nas 8 microetapas cognitivas e algébricas de uma questão padrão de circuitos.
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="anatomyChart"></canvas>
+          </div>
+          <div class="mt-3 p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs text-stone-600">
+            <strong>Pré-Requisitos Matemáticos Críticos:</strong> (1) Identidade <code>kΩ × mA = V</code> e <code>V² / kΩ = mW</code>; (2) Limpeza de denominadores pelo MMC; (3) Sistemas lineares 2×2 e 3×3; (4) Derivada/integral exponencial (apenas na Etapa 2).
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: TECHNICAL MANUAL & 20-MIN PROTOCOL -->
+    <section id="view-manual" class="view-section hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold text-stone-900 mb-2">Manual Técnico de Bolso, Matriz de Decisão &amp; Protocolo dos 20 Minutos</h2>
+        <p class="text-sm text-stone-600 leading-relaxed">
+          Este manual supre integralmente as lacunas documentais do acervo (<strong>Análise Nodal, Análise de Malhas e Amplificadores Operacionais Ideais</strong>), reúne a <strong>Matriz de Escolha de Método</strong> para questões abertas, apresenta a <strong>Blindagem contra os 5 Erros Mais Recorrentes</strong> e fornece o <strong>Protocolo Diagnóstico dos 20 Minutos</strong> caso você trave durante a resolução de um exercício.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-wrap gap-2 border-b border-stone-200 pb-3">
+          <button data-mtopic="mod1" class="manual-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-teal-700 text-white">Módulo 1: Base &amp; Y–Δ</button>
+          <button data-mtopic="mod2" class="manual-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 hover:bg-stone-200">Módulo 2: Nodal &amp; Malhas</button>
+          <button data-mtopic="mod3_th" class="manual-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 hover:bg-stone-200">Módulo 3: Superp., Thévenin &amp; Máx. Pot.</button>
+          <button data-mtopic="mod3_opamp" class="manual-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 hover:bg-stone-200">Módulo 3: Amp-Op Ideal</button>
+          <button data-mtopic="decision" class="manual-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 hover:bg-stone-200">Matriz de Decisão &amp; 5 Erros</button>
+        </div>
+
+        <div id="manualContentArea" class="text-sm text-stone-700 leading-relaxed space-y-4"></div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 class="text-base font-bold text-stone-900">⏱️ Protocolo Diagnóstico dos 20 Minutos (Sistema de Pistas Graduais)</h3>
+            <p class="text-xs text-stone-500">Travou há mais de 20 minutos em uma questão? Selecione exatamente onde ocorreu o bloqueio antes de consultar qualquer resolução:</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="stuckProtocolGrid"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: PROGRESS MATRIX & MOCK EXAMS -->
+    <section id="view-tracker" class="view-section hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm">
+        <h2 class="text-lg sm:text-xl font-bold text-stone-900 mb-2">Matriz de Acompanhamento de Domínio &amp; Simulados Cronometrados</h2>
+        <p class="text-sm text-stone-600 leading-relaxed">
+          Atualize o status de aprendizagem de cada um dos 12 eixos temáticos clicando no botão de estado (salvo automaticamente no navegador). Um bloco só deve avançar para <strong>Aprendido</strong> após você resolver suas questões-termômetro em folha limpa, sem consulta, respeitando a regra das 24–48 horas. Abaixo da matriz, consulte a estrutura oficial e a grade de correção dos dois <strong>Simulados Cronometrados (Dia 14 e Dia 20)</strong>.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-stone-200 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h3 class="text-base font-bold text-stone-900">Matriz Oficial de Progresso (12 Blocos Estratégicos)</h3>
+          <div class="flex items-center gap-2 text-xs">
+            <span id="masterySummaryText" class="font-semibold text-teal-800 bg-teal-50 px-3 py-1 rounded-lg border border-teal-200">0 / 12 Blocos Aprendidos</span>
+            <button id="resetProgressBtn" class="px-2.5 py-1 rounded-lg border border-stone-300 text-stone-600 hover:bg-stone-100">Resetar</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-stone-100 text-stone-700 border-b border-stone-200">
+                <th class="py-2.5 px-3 font-semibold">Eixo Estratégico</th>
+                <th class="py-2.5 px-3 font-semibold">Bloco de Conteúdo</th>
+                <th class="py-2.5 px-3 font-semibold">Estado (Clique p/ Alterar)</th>
+                <th class="py-2.5 px-3 font-semibold">Questões-Termômetro</th>
+                <th class="py-2.5 px-3 font-semibold">Ponto Crítico &amp; Dias</th>
+              </tr>
+            </thead>
+            <tbody id="masteryTableBody" class="divide-y divide-stone-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl border-2 border-teal-600 p-5 sm:p-6 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-teal-100 text-teal-800">SIMULADO 1 • FOCO P3</span>
+            <span class="text-xs font-bold text-stone-600">Dia 14 (30/11) • 80 min estritos</span>
+          </div>
+          <h3 class="text-base font-bold text-stone-900">Simulado Oficial da Avaliação 3 (Sem Consulta)</h3>
+          <p class="text-xs text-stone-600">Apenas lápis, caneta, borracha e calculadora científica (item 5.6 do Plano de Ensino). Meta mínima: <strong>7,0 pts</strong>.</p>
+          <ul class="text-xs text-stone-700 space-y-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
+            <li><strong>Q1 (2,5 pts — Superposição • 18 min):</strong> Lista 3 Q6 (4 mA, 2 mA e 12 V).</li>
+            <li><strong>Q2 (2,5 pts — Thévenin/Norton • 22 min):</strong> Lista 3 Q20 (R<sub>Th</sub> c/ 13i<sub>x</sub>) + Lista 3 Q25 (Norton).</li>
+            <li><strong>Q3 (2,5 pts — Máxima Potência • 20 min):</strong> Lista 3 Q36 (refazer a frio com 4V<sub>x</sub>/1000).</li>
+            <li><strong>Q4 (2,5 pts — Amp-Op Ideal • 20 min):</strong> Lista 3 Q45 (corrente de saída i<sub>o</sub>).</li>
+          </ul>
+          <div class="text-xs text-stone-600 bg-amber-50 border border-amber-200 p-3 rounded-xl">
+            <strong>Grade de Autoatribuição por Questão (2,5 pts):</strong> 0,5 pt desenho/método + 1,0 pt equações LKC/LKT/restrição + 0,5 pt álgebra + 0,5 pt resposta numérica com unidade.
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border-2 border-amber-500 p-5 sm:p-6 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-800">SIMULADO 2 • FOCO SUBSTITUTIVA</span>
+            <span class="text-xs font-bold text-stone-600">Dia 20 (07/12) • 80 min estritos</span>
+          </div>
+          <h3 class="text-base font-bold text-stone-900">Simulado Abrangente A4 (Módulos 1, 2 e 3)</h3>
+          <p class="text-xs text-stone-600">Avaliação cumulativa integral sem consulta. Foque na escolha do método mais rápido nas questões abertas. Meta mínima: <strong>7,0 pts</strong>.</p>
+          <ul class="text-xs text-stone-700 space-y-2 bg-stone-50 p-3.5 rounded-xl border border-stone-200">
+            <li><strong>Q1 (2,5 pts — Módulo 1 P1 • 20 min):</strong> Lista 1 Q34 (ponte 12 V) + Lista 1 Q4 (potência máx. e energia).</li>
+            <li><strong>Q2 (2,5 pts — Módulo 2 Nodal • 20 min):</strong> Lista 2 Q19 (Análise Nodal com fonte controlada 4I<sub>x</sub>).</li>
+            <li><strong>Q3 (2,5 pts — Módulo 2 Malhas • 20 min):</strong> Lista 2 Q34 (Análise de Malhas com 4000I<sub>x</sub> e 12 mA).</li>
+            <li><strong>Q4 (2,5 pts — Módulo 3 P3 • 20 min):</strong> Lista 3 Q39 (Máx. Potência) ou Lista 3 Q55 (Amp-Op Cascata).</li>
+          </ul>
+          <div class="text-xs text-stone-600 bg-teal-50 border border-teal-200 p-3 rounded-xl">
+            <strong>Checklist de Prova UnB:</strong> Tolerância máxima de atraso de 15 min (item 5.4); conferir todas as unidades (V, mA, kΩ, mW) antes de entregar.
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t border-stone-200 mt-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-stone-500">
+      <span>ENE0066 • Introdução aos Circuitos Elétricos (UnB) • Plano Estratégico de Recuperação</span>
+      <span>Meta de Aprovação: P3 + Substitutiva ≥ 12,5 pts (Média Final ≥ 5,0 • Menção MM)</span>
+    </div>
+  </footer>
+
+  <script>
+    const STORAGE_KEY = 'ene0066_study_state_v1';
+    let appState = {
+      completedExercises: {},
+      masteryStates: {},
+      selectedDay: 1,
+      stageFilter: 'all'
+    };
+
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        appState = { ...appState, ...parsed };
+      }
+    } catch (e) {}
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {}
+      updateGlobalProgress();
+    }
+
+    function wrapLabel(str, maxLen = 16) {
+      if (str.length <= maxLen) return str;
+      const words = str.split(' ');
+      const lines = [];
+      let current = '';
+      words.forEach(w => {
+        if ((current + ' ' + w).trim().length <= maxLen) {
+          current = (current + ' ' + w).trim();
+        } else {
+          if (current) lines.push(current);
+          current = w;
+        }
+      });
+      if (current) lines.push(current);
+      return lines;
+    }
+
+    const commonTooltip = {
+      callbacks: {
+        title: function(tooltipItems) {
+          const item = tooltipItems[0];
+          let label = item.chart.data.labels[item.dataIndex];
+          if (Array.isArray(label)) return label.join(' ');
+          return label;
+        }
+      }
+    };
+
+    const scenariosData = [
+      { p3: 'Abaixo de 2,5', mm: 'Impossível (> 10,0)', ms: 'Impossível', diag: 'Reprovação matemática antecipada (mesmo com 10 na Sub, Nf < 5,0).', badge: 'bg-rose-100 text-rose-800' },
+      { p3: '2,5', mm: '10,0', ms: 'Impossível', diag: 'Linha de sobrevivência absoluta: exige nota máxima na Substitutiva.', badge: 'bg-amber-100 text-amber-800' },
+      { p3: '4,0', mm: '8,5', ms: 'Impossível', diag: 'Alta pressão na Etapa 2; exige domínio profundo de P1, P2 e P3.', badge: 'bg-amber-100 text-amber-800' },
+      { p3: '5,0', mm: '7,5', ms: 'Impossível', diag: 'Cenário reversível com os 6 dias intensivos da Etapa 2.', badge: 'bg-amber-100 text-amber-800' },
+      { p3: '6,0', mm: '6,5', ms: 'Impossível', diag: 'Cenário de equilíbrio: desempenho sólido e acessível nas duas provas.', badge: 'bg-emerald-100 text-emerald-800' },
+      { p3: '6,5', mm: '6,0', ms: 'Impossível', diag: 'META RECOMENDADA PADRÃO: distribui o esforço de forma realista.', badge: 'bg-teal-100 text-teal-800' },
+      { p3: '7,0', mm: '5,5', ms: 'Impossível', diag: 'META DE SEGURANÇA: basta acertar pouco mais da metade da Sub.', badge: 'bg-teal-100 text-teal-800' },
+      { p3: '7,5', mm: '5,0', ms: 'Impossível', diag: 'Conforto elevado: tirar a média simples (5,0) na Sub garante MM.', badge: 'bg-emerald-100 text-emerald-800' },
+      { p3: '8,5', mm: '4,0', ms: '10,0', diag: 'Aprovação MM tranquila; abre a fronteira matemática para menção MS.', badge: 'bg-emerald-100 text-emerald-800' },
+      { p3: '10,0', mm: '2,5', ms: '8,5', diag: 'Aprovação altamente favorável (2,5 na Sub para MM ou 8,5 para MS).', badge: 'bg-emerald-100 text-emerald-800' }
+    ];
+
+    const daysData = [
+      { day: 1, stage: 1, date: 'Ter, 17/11', title: 'Linearidade & Superposição (2 Fontes)', coreMin: 120, flexMin: 30,
+        obj: 'Compreender curto-circuito (R=0), circuito aberto (R→∞), anulação de fontes independentes e resolver o primeiro circuito de Superposição.',
+        prereq: 'Prefixos SI (kΩ × mA = V), Lei de Ohm, série/paralelo e divisores básicos (Cat. A).',
+        slides: 'Aula 1 (Slides 15–16); Aula 4 (Slides 4–12, 32–36); Técnicas Adicionais (Slides 3–13, Ex. 3: Vo = 4/3 V).',
+        exercises: [
+          { id: 'd1_1', code: 'L1 Q22 (Ex. 18 Aula 4)', desc: 'Associação série-paralelo (Gabarito slide: 12 kΩ) • 15 min' },
+          { id: 'd1_2', code: 'L1 Q25', desc: 'Divisor de corrente direto com fonte de 12 mA • 15 min' },
+          { id: 'd1_3', code: 'Slide 13/34 Ex. 3', desc: 'Refazer Superposição guiada até confirmar Vo = 4/3 V • 20 min' },
+          { id: 'd1_4', code: 'L3 Q1', desc: 'Superposição com fontes de 12 V e 6 mA • 25 min' }
+        ],
+        alert: 'Na L3 Q1, ao anular a fonte de 12 V desenhe um fio fechado (curto); ao anular a fonte de 6 mA apague o ramo (aberto).' },
+      { day: 2, stage: 1, date: 'Qua, 18/11', title: 'Superposição (3 Fontes) & Aditividade', coreMin: 120, flexMin: 35,
+        obj: 'Dominar soma algébrica de correntes em sentidos opostos e aplicar aditividade incremental sem recalcular contribuições já conhecidas.',
+        prereq: 'LKC (∑i_entrando = ∑i_saindo) e LKT (∑v_k = 0) (Cat. A).',
+        slides: 'Aula 4 (Slides 16–22, 25–28); Técnicas Adicionais (Slides 14–15, Ex. 4 e 5: 5,6 V e -2/3 mA).',
+        exercises: [
+          { id: 'd2_1', code: 'L1 Q7', desc: 'Aplicação rápida de LKC para achar Ix • 12 min' },
+          { id: 'd2_2', code: 'L1 Q35 (Ex. 14 Aula 4)', desc: 'Divisores de tensão em cascata (usar 30 Ω sob v2) • 18 min' },
+          { id: 'd2_3', code: 'L3 Q2 (= L3 Q4)', desc: 'Superposição com 3 fontes: 12 V, 6 V e 6 mA • 25 min' },
+          { id: 'd2_4', code: 'L3 Q7', desc: 'Superposição incremental (io = 3,5 mA antes de ligar 5 mA) • 18 min' }
+        ],
+        alert: 'Na L3 Q7, anule as fontes de 8 V e 10 mA que já estavam ligadas e calcule apenas o efeito da nova fonte de 5 mA, somando a 3,5 mA. (Aula presencial hoje!).' },
+      { day: 3, stage: 1, date: 'Qui, 19/11', title: 'Consolidação Superposição & Base Nodal', coreMin: 120, flexMin: 40,
+        obj: 'Concluir o bloco de Superposição da Lista 3 e dominar a Análise Nodal padrão (LKC + Lei de Ohm nodal).',
+        prereq: 'Corrente em resistor entre nós: i_ab = (Va - Vb)/R saindo do nó e sistemas 2×2 (Cat. A).',
+        slides: 'Aula 4 (Slides 19–23, Ex. 6: IL = 0,4 mA); Manual Técnico Seção 10.2.',
+        exercises: [
+          { id: 'd3_1', code: 'L2 Q1', desc: 'Análise Nodal clássica de 2 nós (6 mA e 4 mA) • 15 min' },
+          { id: 'd3_2', code: 'L2 Q2', desc: 'Análise Nodal para determinar V1 e Vo • 18 min' },
+          { id: 'd3_3', code: 'L3 Q5', desc: 'Superposição para achar VA (10 V, 10 mA, 2 mA) • 22 min' },
+          { id: 'd3_4', code: 'L3 Q8', desc: 'Superposição para achar io e vo simultaneamente • 20 min' }
+        ],
+        alert: 'Padronize todas as correntes nos resistores saindo do nó em análise: (V1 - Vvizinho)/R. Isso elimina erros de sinal.' },
+      { day: 4, stage: 1, date: 'Sex, 20/11', title: 'Thévenin Caso 1 (Fontes Independentes)', coreMin: 120, flexMin: 35,
+        obj: 'Calcular RTh anulando fontes independentes e VTh como tensão de circuito aberto entre os terminais a-b.',
+        prereq: 'Análise Nodal com fontes de tensão (nó fixo no terra e Supernó) (Cat. A/B).',
+        slides: 'Técnicas Adicionais (Slides 16–20 e Slide 23 Ex. 6: RTh = 5,6 kΩ, VTh = 25,6 V, Vo = 3,88 V).',
+        exercises: [
+          { id: 'd4_1', code: 'L2 Q6', desc: 'Análise Nodal com fonte de 12 V ligada ao terra • 15 min' },
+          { id: 'd4_2', code: 'L2 Q8', desc: 'Análise Nodal com Supernó de 12 V e fonte de 14 mA • 20 min' },
+          { id: 'd4_3', code: 'L3 Q11', desc: 'Equivalente de Thévenin para achar Vo em 4 kΩ • 18 min' },
+          { id: 'd4_4', code: 'L3 Q12', desc: 'Equivalente de Thévenin para achar Vo em 2 kΩ • 18 min' }
+        ],
+        alert: 'Na L3 Q12, o resistor de 1 kΩ em série com o terminal aberto tem queda zero em VTh (i=0), mas DEVE ser somado ao calcular RTh!' },
+      { day: 5, stage: 1, date: 'Sáb, 21/11', title: 'Thévenin Interno, Caixa-Preta & Malhas', coreMin: 120, flexMin: 30,
+        obj: 'Aplicar Thévenin em ramos internos, resolver modelagem de caixa-preta por testes de carga e aprender Análise de Malhas.',
+        prereq: 'Análise de Malhas padrão em 2 malhas e validação cruzada Nodal vs. Thévenin (Cat. A).',
+        slides: 'Técnicas Adicionais (Slides 17–20 e 28); Manual Técnico Seção 10.3.',
+        exercises: [
+          { id: 'd5_1', code: 'L2 Q11 (Gêmeo L3 Q13)', desc: 'Resolver por Análise Nodal para achar Io • 18 min' },
+          { id: 'd5_2', code: 'L3 Q13 (Gêmeo L2 Q11)', desc: 'Resolver o mesmo circuito por Thévenin e checar Io • 20 min' },
+          { id: 'd5_3', code: 'L2 Q26', desc: 'Análise de Malhas padrão em 2 malhas (6 V e 12 V) • 17 min' },
+          { id: 'd5_4', code: 'L3 Q16', desc: 'Caixa-preta linear (testes com 8 kΩ e 2 kΩ -> RTh = 4 kΩ, VTh = 24 V) • 18 min' }
+        ],
+        alert: 'Na L3 Q16, divida as duas equações do divisor de tensão V_AB = VTh·RL/(RTh+RL) entre si para achar RTh = 4 kΩ rapidamente.' },
+      { day: 6, stage: 1, date: 'Dom, 22/11', title: 'Teorema de Norton & Transformação de Fontes', coreMin: 120, flexMin: 40,
+        obj: 'Calcular corrente de curto-circuito IN = Iab, RN = RTh e usar transformação de fontes (vs = is·R) para simplificar redes.',
+        prereq: 'Análise de Malhas com Supermalha simples (Cat. A/B).',
+        slides: 'Técnicas Adicionais (Slides 25–31, Ex. 8: RN = 5,6 kΩ, IN = 4,6 mA, Vo = 3,88 V).',
+        exercises: [
+          { id: 'd6_1', code: 'L2 Q29', desc: 'Supermalha simples com 12 V e 6 mA • 16 min' },
+          { id: 'd6_2', code: 'L3 Q15 + L3 Q24', desc: 'Par gêmeo: achar Io por Thévenin (Q15) e Norton (Q24) • 32 min' },
+          { id: 'd6_3', code: 'L3 Q21 (= L2 Q30)', desc: 'Equivalente de Norton para achar Vo • 18 min' },
+          { id: 'd6_4', code: 'L3 Q22', desc: 'Equivalente de Norton com 24 V e 2 mA • 15 min' }
+        ],
+        alert: 'Ao colocar curto-circuito entre a e b para achar IN, qualquer resistor em paralelo direto com a-b fica em curto (corrente zero nele).' },
+      { day: 7, stage: 1, date: 'Seg, 23/11', title: 'Thévenin/Norton Caso 2 (Sem Fonte Indep.)', coreMin: 120, flexMin: 35,
+        obj: 'Entender por que VTh = 0 e IN = 0 quando só há fontes dependentes e aplicar fonte de teste externa (Vin ou Iin) para achar RTh.',
+        prereq: 'Os 4 tipos de fontes dependentes e equações de variáveis de controle Vx, Ix (Cat. A).',
+        slides: 'Aula 2 (Slides 8–13); Técnicas Adicionais (Slides 21, 22 e 29 — polaridade de Vin/Iin e RTh negativo).',
+        exercises: [
+          { id: 'd7_1', code: 'L1 Q10 + L1 Q18', desc: 'Aquecimento com fontes controladas (L1 Q18 = Ex. 7 Aula 4) • 20 min' },
+          { id: 'd7_2', code: 'L3 Q19', desc: 'Thévenin entre a-b apenas com fonte 250·iΔ • 18 min' },
+          { id: 'd7_3', code: 'L3 Q31', desc: 'Thévenin entre A-B apenas com fonte Vx/1000 • 18 min' },
+          { id: 'd7_4', code: 'L3 Q23', desc: 'Norton entre a-b com fontes 250·ix e 1.5·ix • 20 min' }
+        ],
+        alert: 'Slide 29/34: A corrente Iin da fonte de teste Vin deve SAIR do terminal positivo de Vin e ENTRAR no circuito pelo terminal a.' },
+      { day: 8, stage: 1, date: 'Ter, 24/11', title: 'Thévenin Caso 2 Completo (Fontes Mistas)', coreMin: 120, flexMin: 45,
+        obj: 'Resolver circuitos com fontes independentes E dependentes: achar VTh aberto, anular só as independentes para achar RTh (ou RTh = VTh/IN).',
+        prereq: 'Análise Nodal com fontes dependentes (L2 Q18/Q20) (Cat. A).',
+        slides: 'Técnicas Adicionais (Slide 24/34, Ex. 7: RTh = 1,333 kΩ, VTh = 14,66 V, Vo = 6,28 V).',
+        exercises: [
+          { id: 'd8_1', code: 'Slide 24/34 Ex. 7', desc: 'Resolver passo a passo até confirmar Vo = 6,28 V • 25 min' },
+          { id: 'd8_2', code: 'L2 Q20 + L3 Q28', desc: 'Par gêmeo: resolver por Nodal (L2 Q20) e Thévenin (L3 Q28) • 35 min' },
+          { id: 'd8_3', code: 'L3 Q26', desc: 'Thévenin para achar Io com 12 V e fonte Vx • 22 min' },
+          { id: 'd8_4', code: 'L3 Q27', desc: 'Thévenin para achar Vo com 12 V, 2 mA e fonte Ix • 22 min' }
+        ],
+        alert: 'Confira RTh pelo método da fonte de teste E também dividindo VTh / IN (quando VTh ≠ 0). Os dois valores devem coincidir!' },
+      { day: 9, stage: 1, date: 'Qua, 25/11', title: 'Teorema da Máxima Transferência de Potência', coreMin: 120, flexMin: 35,
+        obj: 'Aplicar RL = RTh para potência máxima na carga variável e calcular pmax = VTh² / (4·RTh). Identificar exceções quando a carga é fixa.',
+        prereq: 'Potência em resistores (p = i²R = v²/R) e equivalentes de Thévenin (Cat. A).',
+        slides: 'Técnicas Adicionais (Slides 32–34).',
+        exercises: [
+          { id: 'd9_1', code: 'L3 Q33', desc: 'Cálculo direto de RL para máxima potência (12 V) • 12 min' },
+          { id: 'd9_2', code: 'L3 Q34', desc: 'Cálculo de RL e pmax com fonte de 4 mA • 18 min' },
+          { id: 'd9_3', code: 'L3 Q35 (= L2 Q25)', desc: 'RL e pmax em rede de 3 malhas • 22 min' },
+          { id: 'd9_4', code: 'L3 Q36', desc: 'RL e pmax com fonte dependente 4Vx/1000 e 1 mA • 25 min' },
+          { id: 'd9_5', code: 'L3 Q38', desc: 'Pegadinha conceitual: maximizar potência no resistor FIXO de 6 Ω • 10 min' }
+        ],
+        alert: 'Na L3 Q38, a potência pedida é no resistor fixo de 6 Ω (e não em Ro). Para maximizar a corrente em 6 Ω, faça Ro = 0 Ω! (Aula de Amp-Op hoje!).' },
+      { day: 10, stage: 1, date: 'Qui, 26/11', title: 'Amplificadores Operacionais Ideais (Base)', coreMin: 120, flexMin: 30,
+        obj: 'Dominar as duas regras do Amp-Op ideal (v- = v+ e i- = i+ = 0), resolver configurações inversora, não-inversora e achar corrente io.',
+        prereq: 'LKC nodal e divisor de tensão na entrada não-inversora (Cat. A).',
+        slides: 'Manual Técnico Seção 10.6 + Slides da Aula de 25/11 (SIGAA).',
+        exercises: [
+          { id: 'd10_1', code: 'L3 Q41', desc: 'Tensão vo em Amp-Op básico com 5 V e 2 V • 12 min' },
+          { id: 'd10_2', code: 'L3 Q42', desc: 'Tensão vo e corrente de saída io com entrada de 1 V • 18 min' },
+          { id: 'd10_3', code: 'L3 Q43', desc: 'Tensão vo em Amp-Op excitado por fonte de 5 mA • 18 min' },
+          { id: 'd10_4', code: 'L3 Q48', desc: 'Determinação de ix e vo com entrada de 4 mV • 22 min' }
+        ],
+        alert: 'NUNCA aplique LKC no nó de saída do Amp-Op antes de achar vo. Aplique LKC na entrada inversora (-) primeiro!' },
+      { day: 11, stage: 1, date: 'Sex, 27/11', title: 'Amp-Op: Ganhos Literais, Somador & Thévenin', coreMin: 120, flexMin: 35,
+        obj: 'Deduzir ganhos literais (vo/vs), resolver circuitos somadores/diferenciais e achar o equivalente de Thévenin na saída de um Amp-Op.',
+        prereq: 'Álgebra literal em equações nodais e Thévenin (Cat. A).',
+        slides: 'Manual Técnico Seção 10.6 + Slides de Amp-Op.',
+        exercises: [
+          { id: 'd11_1', code: 'L3 Q46', desc: 'Ganho de malha fechada literal vo/vs com R1, R2, R3, R4, Rf • 20 min' },
+          { id: 'd11_2', code: 'L3 Q47', desc: 'Aplicação numérica direta com 5 V • 15 min' },
+          { id: 'd11_3', code: 'L3 Q49', desc: 'Expressão literal de vo em termos de v1, v2 e v3 • 22 min' },
+          { id: 'd11_4', code: 'L3 Q44', desc: 'Questão-ponte: Equivalente de Thévenin entre a-b com Amp-Op • 22 min' }
+        ],
+        alert: 'Na L3 Q44, lembre-se de que a saída ideal de um Amp-Op atua como fonte de tensão controlada ideal (impedância interna zero antes do resistor de 10 Ω).' },
+      { day: 12, stage: 1, date: 'Sáb, 28/11', title: 'Amplificadores Operacionais em Cascata', coreMin: 120, flexMin: 40,
+        obj: 'Analisar sistemas com 2 e 3 Amp-Ops em cascata ou realimentação acoplada resolvendo estágio por estágio.',
+        prereq: 'Sistemas lineares 2×2 em Análise Nodal acoplada (Cat. A/B).',
+        slides: 'Manual Técnico Seção 10.6 + Slides de Amp-Op.',
+        exercises: [
+          { id: 'd12_1', code: 'L3 Q50', desc: 'Dois Amp-Ops em cascata com entrada de 5 mV • 20 min' },
+          { id: 'd12_2', code: 'L3 Q53', desc: 'Ganho de malha fechada vo/vi com rede acoplada • 20 min' },
+          { id: 'd12_3', code: 'L3 Q55', desc: 'Dois Amp-Ops com fontes de 2 V e 3 V • 25 min' },
+          { id: 'd12_4', code: 'L3 Q56', desc: 'Três Amp-Ops (A, B e C) em sistema modular • 25 min' }
+        ],
+        alert: 'Na L3 Q56, calcule primeiro voA e voB separadamente e trate-os como fontes de tensão alimentando o terceiro estágio C.' },
+      { day: 13, stage: 1, date: 'Dom, 29/11', title: 'Consolidação Transversal Sem Consulta (P3)', coreMin: 120, flexMin: 35,
+        obj: 'Resolver 5 questões integradoras da Lista 3 totalmente sem consulta, treinando escolha de método e diagnóstico de erros.',
+        prereq: 'Revisão dos erros anotados nos Dias 01 a 12.',
+        slides: 'Consulta permitida APENAS após finalizar cada questão.',
+        exercises: [
+          { id: 'd13_1', code: 'L3 Q4 (Teste cego Q2)', desc: 'Refazer Superposição de 3 fontes sem consulta • 15 min' },
+          { id: 'd13_2', code: 'L3 Q17', desc: 'Thévenin entre a-b com 10 A, 500 V e resistor de 5,2 Ω • 15 min' },
+          { id: 'd13_3', code: 'L3 Q29', desc: 'Thévenin avançado com fonte dependente 2Vx • 25 min' },
+          { id: 'd13_4', code: 'L3 Q37', desc: 'Máxima transferência de potência com 60 V e 15 mA • 20 min' },
+          { id: 'd13_5', code: 'L3 Q52', desc: 'Dois Amp-Ops acoplados com entradas vs1 e vs2 • 20 min' }
+        ],
+        alert: 'Audite cada erro em 4 categorias: (a) Topologia/curto/aberto; (b) Sinal LKC/LKT; (c) Controle de fonte dependente; (d) Álgebra.' },
+      { day: 14, stage: 1, date: 'Seg, 30/11', title: 'SIMULADO OFICIAL P3 CRONOMETRADO', coreMin: 120, flexMin: 30,
+        obj: 'Simular condições reais da P3 (80 min estritos sem consulta, 4 questões de 2,5 pts) e corrigir pontos frágeis.',
+        prereq: 'Todos os tópicos do Módulo 3 sob gestão de tempo.',
+        slides: 'ZERO consulta nos 80 min de prova; corrigir nos 40 min finais.',
+        exercises: [
+          { id: 'd14_1', code: 'Simulado Q1: L3 Q6', desc: 'Superposição (4 mA, 2 mA e 12 V) • 18 min' },
+          { id: 'd14_2', code: 'Simulado Q2: L3 Q20 + Q25', desc: 'Thévenin c/ 13ix + Norton para Io • 22 min' },
+          { id: 'd14_3', code: 'Simulado Q3: L3 Q36', desc: 'Máxima Potência c/ fonte dependente (a frio) • 20 min' },
+          { id: 'd14_4', code: 'Simulado Q4: L3 Q45', desc: 'Amp-Op com cálculo da corrente io • 20 min' }
+        ],
+        alert: 'Meta mínima no Simulado: 7,0 pts. Verifique se todas as respostas possuem unidade explícita (V, mA, kΩ, mW).' },
+      { day: 15, stage: 1, date: 'Ter, 01/12', title: 'VÉSPERA P3 • Revisão Leve & Descanso', coreMin: 100, flexMin: 0,
+        obj: 'Revisar padrões-chave sem sobrecarga cognitiva e preparar material para a P3 de amanhã (02/12).',
+        prereq: 'Checklist de sinais e fórmulas do Módulo 3.',
+        slides: 'Técnicas Adicionais (Slides 28, 29, 34 e Exemplos 3, 5, 6, 7, 8).',
+        exercises: [
+          { id: 'd15_1', code: 'Revisão L3 Q7', desc: 'Rever aditividade incremental • 8 min' },
+          { id: 'd15_2', code: 'Revisão L3 Q16', desc: 'Rever sistema da caixa-preta • 10 min' },
+          { id: 'd15_3', code: 'Revisão L3 Q28', desc: 'Rever montagem de VTh e RTh com fonte controlada • 15 min' },
+          { id: 'd15_4', code: 'Revisão L3 Q42 + Q50', desc: 'Rever LKC em Amp-Op simples e cascata • 20 min' }
+        ],
+        alert: 'Encerre os estudos cedo! Amanhã (02/12) lembre-se da tolerância máxima de 15 min para entrar na sala (item 5.4).' },
+      { day: 16, stage: 2, date: 'Qui, 03/12', title: 'Etapa 2 (Sub): Transformações Y–Δ e Δ–Y', coreMin: 130, flexMin: 35,
+        obj: 'Dominar o principal tópico adiado da P1 (Cat. C): converter redes em ponte entre Triângulo (Δ) e Estrela (Y).',
+        prereq: 'Associação série-paralelo e divisores (Módulo 1).',
+        slides: 'Aula 4 (Slides 42–49, Ex. 19: 34 kΩ e Ex. 20: 24 V).',
+        exercises: [
+          { id: 'd16_1', code: 'Aula 4 Ex. 19 e 20', desc: 'Resolver acompanhando Slides 48–49 • 30 min' },
+          { id: 'd16_2', code: 'L1 Q33', desc: 'Ponte simétrica Δ (12 Ω) -> Y (4 Ω) para achar Io • 18 min' },
+          { id: 'd16_3', code: 'L1 Q24 (itens c e d)', desc: 'Resistência equivalente via transformação Y–Δ • 22 min' },
+          { id: 'd16_4', code: 'L1 Q36 + L1 Q37', desc: 'Pontes resistivas com 125 V e 192 V • 40 min' }
+        ],
+        alert: 'Na conversão Δ → Y, remova os 3 resistores do triângulo e insira o nó central novo conectado aos 3 vértices.' },
+      { day: 17, stage: 2, date: 'Sex, 04/12', title: 'Etapa 2 (Sub): Gráficos, Cálculo & Tellegen', coreMin: 130, flexMin: 30,
+        obj: 'Fechar todo o Módulo 1 (P1): derivadas/integrais de carga, potência e energia, gráficos por partes e Teorema de Tellegen.',
+        prereq: 'Convenção passiva de sinais e integrais exponenciais padrão.',
+        slides: 'Aula 1 (Slides 17–34, Ex. 7: 2,4 mJ); Aula 2 (Slides 14–24).',
+        exercises: [
+          { id: 'd17_1', code: 'L1 Q1 + L1 Q5', desc: 'Energia e carga por áreas de gráficos (atenção a ks = 10³ s na Q5) • 32 min' },
+          { id: 'd17_2', code: 'L1 Q3', desc: 'Potência máxima e energia total com funções exponenciais • 20 min' },
+          { id: 'd17_3', code: 'L1 Q8', desc: 'Potência no elemento 3 e convenção passiva • 15 min' },
+          { id: 'd17_4', code: 'L1 Q16', desc: 'Balanço completo de potência ∑Pi = 0 (Tellegen) • 22 min' }
+        ],
+        alert: 'Na L1 Q5, o eixo horizontal está em quilossegundos (1 ks = 1000 s). Confira sempre as unidades dos eixos!' },
+      { day: 18, stage: 2, date: 'Sáb, 05/12', title: 'Etapa 2 (Sub): Análise Nodal Avançada (P2)', coreMin: 130, flexMin: 40,
+        obj: 'Dominar os problemas densos de Análise Nodal da Lista 2 (condutâncias em Siemens, supernós múltiplos e rede de 5 nós).',
+        prereq: 'Lei de Ohm em condutância (i = GΔV) e sistemas 3×3.',
+        slides: 'Aula 4 (Slide 8/49); Manual Técnico Seção 10.2.',
+        exercises: [
+          { id: 'd18_1', code: 'L2 Q12', desc: 'Análise Nodal com condutâncias em Siemens (S) e 2 supernós • 20 min' },
+          { id: 'd18_2', code: 'L2 Q15', desc: 'Análise Nodal com 4 fontes independentes • 20 min' },
+          { id: 'd18_3', code: 'L2 Q22', desc: 'Supernó de 4 V + fonte controlada 2vx • 18 min' },
+          { id: 'd18_4', code: 'L2 Q24 + L3 Q32', desc: 'Par gêmeo: rede de 5 nós (Nodal vs. Thévenin) • 40 min' }
+        ],
+        alert: 'Na L2 Q12, mantenha os valores em Siemens (i = Gv) em vez de inverter para frações: o sistema sai direto sem MMC.' },
+      { day: 19, stage: 2, date: 'Dom, 06/12', title: 'Etapa 2 (Sub): Malhas Avançadas & Tellegen', coreMin: 130, flexMin: 35,
+        obj: 'Fechar a segunda metade da Lista 2: supermalhas com fontes dependentes e verificação de correntes pelo Teorema de Tellegen.',
+        prereq: 'Cálculo da tensão sobre fontes de corrente via LKT.',
+        slides: 'Aula 2 (Slide 14/26); Manual Técnico Seção 10.3.',
+        exercises: [
+          { id: 'd19_1', code: 'L2 Q33', desc: 'Potência na fonte de 2 A via Malhas com 2Ix • 20 min' },
+          { id: 'd19_2', code: 'L2 Q35', desc: 'Supermalha com fonte controlada de corrente Ix • 20 min' },
+          { id: 'd19_3', code: 'L2 Q38', desc: 'Análise de Malhas com duas fontes dependentes (2Vx e Ix) • 22 min' },
+          { id: 'd19_4', code: 'L2 Q41', desc: 'Correntes de ramo + verificação completa por Tellegen • 35 min' }
+        ],
+        alert: 'Uma fonte de corrente NÃO tem tensão zero! Para achar p = v·i nela, aplique LKT em um laço fechado que passe pela fonte.' },
+      { day: 20, stage: 2, date: 'Seg, 07/12', title: 'SIMULADO GERAL DA SUBSTITUTIVA (A4)', coreMin: 135, flexMin: 35,
+        obj: 'Revisar a prova P3 realizada em 02/12, resolver L3 Q40 e executar o Simulado Cumulativo (80 min) cobrindo P1, P2 e P3.',
+        prereq: 'Integração completa dos Módulos 1, 2 e 3.',
+        slides: 'Consulta liberada APÓS os 80 min do simulado.',
+        exercises: [
+          { id: 'd20_1', code: 'Aquecimento: L3 Q40 + P3', desc: 'Ro para absorver 250 W + refazer pior questão da P3 • 30 min' },
+          { id: 'd20_2', code: 'Simulado Sub Q1 (Mód. 1)', desc: 'L1 Q34 (ponte) + L1 Q4 (potência máx. e energia) • 20 min' },
+          { id: 'd20_3', code: 'Simulado Sub Q2 (Mód. 2)', desc: 'L2 Q19 (Análise Nodal com fonte controlada 4Ix) • 20 min' },
+          { id: 'd20_4', code: 'Simulado Sub Q3 & Q4', desc: 'L2 Q34 (Malhas 4000Ix) + L3 Q39 ou Q55 • 40 min' }
+        ],
+        alert: 'Na Substitutiva, quando o método não for imposto, escolha sempre o método com MENOR número de equações (Matriz Seção 10.4).' },
+      { day: 21, stage: 2, date: 'Ter, 08/12', title: 'VÉSPERA SUBSTITUTIVA • Consolidação Final', coreMin: 105, flexMin: 0,
+        obj: 'Revisar fórmulas de P1, P2 e P3 em 4 blocos curtos sem consulta e descansar para a Substitutiva de amanhã (09/12).',
+        prereq: 'Fórmulas Y–Δ, integrais exponenciais, supernó/supermalha, pmax e Amp-Op.',
+        slides: 'Slides-resumo das Aulas 1, 2, 4 e Técnicas Adicionais.',
+        exercises: [
+          { id: 'd21_1', code: 'Bloco Mód. 1: L1 Q22 + Q33', desc: 'Revisão rápida série-paralelo e Δ → Y • 15 min' },
+          { id: 'd21_2', code: 'Bloco Mód. 2A: L2 Q8', desc: 'Revisão rápida de Supernó • 15 min' },
+          { id: 'd21_3', code: 'Bloco Mód. 2B: L2 Q29', desc: 'Revisão rápida de Supermalha • 15 min' },
+          { id: 'd21_4', code: 'Bloco Mód. 3: L3 Q19 + Q42', desc: 'Revisão rápida de fonte de teste RTh e Amp-Op • 15 min' }
+        ],
+        alert: 'Você está pronto! Confirme presença ≥ 75% no SIGAA e leve calculadora testada para a Substitutiva em 09/12/2026.' }
+    ];
+
+    const questionsCatalog = [
+      { id: 'L1 Q1', list: 'L1', fig: 'Fig. 1', topic: 'Energia a partir de gráfico q(t) e tensão constante', diff: 'Fácil', time: '15 min', prio: 3, tags: ['adiar_sub'], note: 'Tópico exclusivo de P1 (Cat. C); realizar no Dia 17.' },
+      { id: 'L1 Q2', list: 'L1', fig: 'Fig. 2', topic: 'Corrente i(t) via derivada gráfica de energia w(t)', diff: 'Médio', time: '20 min', prio: 3, tags: ['adiar_sub'], note: 'Sem aplicação direta na P3 (Cat. C); revisar na Etapa 2.' },
+      { id: 'L1 Q3', list: 'L1', fig: 'Sem fig.', topic: 'Potência máxima e energia total com exponenciais', diff: 'Médio', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Clássica de P1/Sub; agendada para o Dia 17.' },
+      { id: 'L1 Q4', list: 'L1', fig: 'Sem fig.', topic: 'Instante de potência máxima e energia (regra do produto)', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: 'Exige integração por partes; usada no Simulado Sub (Dia 20).' },
+      { id: 'L1 Q5', list: 'L1', fig: 'Fig. 3', topic: 'Carga e energia por áreas de v(t) e i(t) (eixo em ks)', diff: 'Médio', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Atenção à escala 1 ks = 10³ s no eixo do tempo (Dia 17).' },
+      { id: 'L1 Q6', list: 'L1', fig: 'Fig. 4', topic: 'Convenção passiva e potência com fonte 1Ix', diff: 'Fácil', time: '15 min', prio: 2, tags: [], note: 'Treina convenção passiva de sinais e fonte dependente.' },
+      { id: 'L1 Q7', list: 'L1', fig: 'Fig. 5', topic: 'LKC em rede de elementos em bloco para achar Ix', diff: 'Fácil', time: '15 min', prio: 2, tags: [], note: 'Destrava visão de nós e LKC já no Dia 2.' },
+      { id: 'L1 Q8', list: 'L1', fig: 'Fig. 6', topic: 'Potência no elemento 3 com fonte 2Vx (Tellegen)', diff: 'Médio', time: '20 min', prio: 3, tags: ['adiar_sub'], note: 'Trabalhada no Dia 17 (Etapa 2).' },
+      { id: 'L1 Q9', list: 'L1', fig: 'Fig. 7', topic: 'Potência no elemento 1 com fonte dependente 4Ix', diff: 'Médio', time: '20 min', prio: 3, tags: ['adiar_sub'], note: 'Reserva de treino de Tellegen para a Etapa 2.' },
+      { id: 'L1 Q10', list: 'L1', fig: 'Fig. 8', topic: 'LKC em nó único com fontes dependentes 2Ix, 3Ix', diff: 'Fácil', time: '12 min', prio: 1, tags: [], note: 'Aquecimento rápido de fontes controladas no Dia 7.' },
+      { id: 'L1 Q11', list: 'L1', fig: 'Fig. 9', topic: 'LKC sequencial em dois nós com fonte 2Ix', diff: 'Fácil', time: '15 min', prio: 2, tags: [], note: 'Consolida soma algébrica de correntes.' },
+      { id: 'L1 Q12', list: 'L1', fig: 'Fig. 10', topic: 'LKC em múltiplos nós com duas fontes 2Ix', diff: 'Médio', time: '18 min', prio: 2, tags: [], note: 'Prepara equacionamento nodal.' },
+      { id: 'L1 Q13', list: 'L1', fig: 'Fig. 11', topic: 'LKT em malhas com fonte dependente 2Vx', diff: 'Fácil', time: '15 min', prio: 1, tags: ['gemeo', 'sem_consulta'], note: 'Idêntica ao Ex. 11 da Aula 4 (Slide 30); base para LKT.' },
+      { id: 'L1 Q14', list: 'L1', fig: 'Fig. 12', topic: 'Cálculo de Vba e potência na fonte 2Vx', diff: 'Médio', time: '20 min', prio: 1, tags: ['gemeo'], note: 'Idêntica ao Ex. 12 da Aula 4 (Slide 31); integra Ohm e LKT.' },
+      { id: 'L1 Q15', list: 'L1', fig: 'Fig. 13', topic: 'LKT em três laços acoplados com fonte 4Vx', diff: 'Médio', time: '18 min', prio: 2, tags: [], note: 'Reforça polaridade de quedas e aumentos de tensão.' },
+      { id: 'L1 Q16', list: 'L1', fig: 'Fig. 14', topic: 'Potência em todos os elementos (Tellegen ∑Pi = 0)', diff: 'Médio', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Questão global de P1 agendada para o Dia 17.' },
+      { id: 'L1 Q17', list: 'L1', fig: 'Fig. 15', topic: 'Potência absorvida pela fonte dependente 2VA', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Treina análise mista com fonte controlada.' },
+      { id: 'L1 Q18', list: 'L1', fig: 'Fig. 16', topic: 'Corrente IL em circuito paralelo com fonte 3Ix', diff: 'Médio', time: '18 min', prio: 1, tags: ['gemeo', 'sem_consulta'], note: 'Idêntica ao Ex. 7 da Aula 4 (Slide 24); executada no Dia 7.' },
+      { id: 'L1 Q19', list: 'L1', fig: 'Fig. 17', topic: 'Análise regressiva (dado io = 1 A, achar i1 e potências)', diff: 'Médio', time: '20 min', prio: 1, tags: [], note: 'Desenvolve fluência em Ohm, LKC e LKT em cascata.' },
+      { id: 'L1 Q20', list: 'L1', fig: 'Fig. 18', topic: 'Análise regressiva (dados ia = 4 A e ib = -2 A)', diff: 'Médio', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Semelhante à Q19, porém mais longa; adiada p/ Etapa 2.' },
+      { id: 'L1 Q21', list: 'L1', fig: 'Fig. 19', topic: 'Correntes io, i1, i2 com fonte controlada vΔ/2', diff: 'Médio', time: '20 min', prio: 1, tags: ['gemeo'], note: 'Idêntica ao Ex. 15 da Aula 4 (Slide 38).' },
+      { id: 'L1 Q22', list: 'L1', fig: 'Fig. 20', topic: 'Resistência equivalente RAB série-paralelo', diff: 'Fácil', time: '15 min', prio: 1, tags: ['gemeo', 'sem_consulta'], note: 'Ex. 18 da Aula 4 (Resp. slide: 12 kΩ); base para RTh no Dia 1.' },
+      { id: 'L1 Q23', list: 'L1', fig: 'Fig. 21', topic: 'Resistência equivalente RAB com fios diagonais', diff: 'Médio', time: '18 min', prio: 2, tags: [], note: 'Evita erros ao identificar nós em curto diagonal.' },
+      { id: 'L1 Q24', list: 'L1', fig: 'Fig. 22', topic: 'Resistência equivalente em 4 redes (a, b e pontes c, d)', diff: 'Difícil', time: '35 min', prio: 3, tags: ['adiar_sub'], note: 'Itens (c) e (d) exigem Transformação Y–Δ (Dia 16).' },
+      { id: 'L1 Q25', list: 'L1', fig: 'Fig. 23', topic: 'Divisor de corrente direto com fonte de 12 mA', diff: 'Fácil', time: '12 min', prio: 1, tags: ['sem_consulta'], note: 'Vital para Superposição e Norton; executada no Dia 1.' },
+      { id: 'L1 Q26', list: 'L1', fig: 'Fig. 24', topic: 'Tensão Vo com duas fontes de corrente em paralelo', diff: 'Fácil', time: '12 min', prio: 1, tags: [], note: 'Conecta com equivalência de fontes (Slide 6/34).' },
+      { id: 'L1 Q27', list: 'L1', fig: 'Fig. 25', topic: 'Tensão VAB em rede resistiva com fonte de 12 A', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Treina polaridade entre terminais A–B.' },
+      { id: 'L1 Q28', list: 'L1', fig: 'Fig. 26', topic: 'Tensão VAB e corrente I1 em rede mista com 40 V', diff: 'Médio', time: '22 min', prio: 2, tags: [], note: 'Consolida redução série-paralelo para Thévenin.' },
+      { id: 'L1 Q29', list: 'L1', fig: 'Fig. 27', topic: 'Achar fonte VS sabendo que Io = 2 mA', diff: 'Fácil', time: '15 min', prio: 3, tags: ['adiar_sub'], note: 'Útil para revisão de P1 na Etapa 2.' },
+      { id: 'L1 Q30', list: 'L1', fig: 'Fig. 28', topic: 'Achar Vx sabendo que V2 = 4 V', diff: 'Médio', time: '22 min', prio: 3, tags: ['adiar_sub'], note: 'Análise regressiva em cascata para Etapa 2.' },
+      { id: 'L1 Q31', list: 'L1', fig: 'Fig. 29', topic: 'Achar IA sabendo que Io = 2 mA (duas fontes 6 V)', diff: 'Médio', time: '20 min', prio: 3, tags: ['adiar_sub'], note: 'Reserva de aprofundamento para Etapa 2.' },
+      { id: 'L1 Q32', list: 'L1', fig: 'Fig. 30', topic: 'Achar tensão VA (errata: enunciado diz "corrente VA")', diff: 'Médio', time: '20 min', prio: 3, tags: ['adiar_sub'], note: 'Nota: calcular a TENSÃO VA entre os terminais marcados.' },
+      { id: 'L1 Q33', list: 'L1', fig: 'Fig. 31', topic: 'Corrente Io em ponte resistiva (Δ simétrico 12 Ω)', diff: 'Médio', time: '22 min', prio: 3, tags: ['adiar_sub'], note: 'Clássica de Transformação Δ → Y no Dia 16.' },
+      { id: 'L1 Q34', list: 'L1', fig: 'Fig. 32', topic: 'Tensão Vo em ponte resistiva com fonte de 12 V', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Topologia de ponte idêntica ao cálculo de VTh; no Simulado Sub.' },
+      { id: 'L1 Q35', list: 'L1', fig: 'Fig. 33', topic: 'Tensões v1 e v2 com 3 V (Ex. 14 Aula 4: usar 30 Ω)', diff: 'Fácil', time: '15 min', prio: 1, tags: ['gemeo'], note: 'Errata corrigida via Slide 37/49; executada no Dia 2.' },
+      { id: 'L1 Q36', list: 'L1', fig: 'Fig. 34', topic: 'Correntes ig e io em ponte com fonte de 125 V (Y–Δ)', diff: 'Difícil', time: '28 min', prio: 3, tags: ['adiar_sub'], note: 'Foco específico em Y–Δ (Cat. C); Dia 16.' },
+      { id: 'L1 Q37', list: 'L1', fig: 'Fig. 35', topic: 'Potência no resistor de 3 kΩ em ponte de 192 V (Y–Δ)', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: 'Questão avançada de P1 realizada no Dia 16.' },
+      { id: 'L1 Q38', list: 'L1', fig: 'Fig. 36', topic: 'Tensões v1 e v2 com fonte de 124 V', diff: 'Médio', time: '20 min', prio: 3, tags: ['adiar_sub'], note: 'Similar à Q35; reserva para Etapa 2.' },
+      { id: 'L1 Q39', list: 'L1', fig: 'Fig. 37', topic: 'Correntes io, i1, i2 com fonte de 1 A', diff: 'Médio', time: '20 min', prio: 3, tags: ['adiar_sub'], note: 'Similar à Q25/Q26; reserva para Substitutiva.' },
+      { id: 'L1 Q40', list: 'L1', fig: 'Fig. 38', topic: 'Tensão de saída Vo com fonte controlada 4×10⁵·Ib', diff: 'Médio', time: '20 min', prio: 2, tags: ['ponte'], note: 'Modelo elementar de amplificador; excelente ponte conceitual.' },
+
+      { id: 'L2 Q1', list: 'L2', fig: 'Fig. 1', topic: 'Análise Nodal padrão (2 nós, fontes 6 mA e 4 mA)', diff: 'Fácil', time: '15 min', prio: 1, tags: ['sem_consulta'], note: 'Porta de entrada obrigatória para Análise Nodal (Dia 3).' },
+      { id: 'L2 Q2', list: 'L2', fig: 'Fig. 2', topic: 'Análise Nodal para achar V1 e Vo (2 mA e 12 mA)', diff: 'Fácil', time: '15 min', prio: 1, tags: [], note: 'Consolida equacionamento nodal padrão no Dia 3.' },
+      { id: 'L2 Q3', list: 'L2', fig: 'Fig. 3', topic: 'Análise Nodal para achar corrente de ramo Io', diff: 'Fácil', time: '15 min', prio: 2, tags: [], note: 'Ensina a calcular Io = (V1 - V2)/R após achar os nós.' },
+      { id: 'L2 Q4', list: 'L2', fig: 'Fig. 4', topic: 'Análise Nodal com 3 fontes de corrente e ramo superior', diff: 'Médio', time: '18 min', prio: 2, tags: [], note: 'Treina visualização de ramos em ponte entre nós.' },
+      { id: 'L2 Q5', list: 'L2', fig: 'Fig. 5', topic: 'Análise Nodal para achar Io (1 mA e 2 mA)', diff: 'Fácil', time: '15 min', prio: 3, tags: ['adiar_sub'], note: 'Treino extra opcional.' },
+      { id: 'L2 Q6', list: 'L2', fig: 'Fig. 6', topic: 'Análise Nodal com fonte de 12 V ligada ao terra', diff: 'Fácil', time: '15 min', prio: 1, tags: [], note: 'Nó com potencial fixo imediato; executada no Dia 4.' },
+      { id: 'L2 Q7', list: 'L2', fig: 'Fig. 7', topic: 'Análise Nodal mista (fonte de 6 V e 4 mA, 2 mA)', diff: 'Fácil', time: '15 min', prio: 2, tags: [], note: 'Aparece frequentemente no cálculo de VTh.' },
+      { id: 'L2 Q8', list: 'L2', fig: 'Fig. 8', topic: 'Análise Nodal com Supernó de 12 V e fonte 14 mA', diff: 'Médio', time: '20 min', prio: 1, tags: ['sem_consulta'], note: 'Questão-modelo essencial para aprender Supernó (Dia 4).' },
+      { id: 'L2 Q9', list: 'L2', fig: 'Fig. 9', topic: 'Análise Nodal com fonte de 12 V e 12 mA', diff: 'Médio', time: '18 min', prio: 2, tags: [], note: 'Treina escolha estratégica do nó terra.' },
+      { id: 'L2 Q10', list: 'L2', fig: 'Fig. 10', topic: 'Análise Nodal com Supernó superior de 12 V', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Consolida geometria de supernó.' },
+      { id: 'L2 Q11', list: 'L2', fig: 'Fig. 11', topic: 'Análise Nodal com duas fontes de tensão (12 V e 6 V)', diff: 'Médio', time: '18 min', prio: 1, tags: ['gemeo'], note: 'Mesmo circuito da L3 Q13; validação cruzada no Dia 5.' },
+      { id: 'L2 Q12', list: 'L2', fig: 'Fig. 12', topic: 'Análise Nodal em condutâncias (Siemens) e 2 supernós', diff: 'Médio', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Típica questão de P2/Sub; executada no Dia 18.' },
+      { id: 'L2 Q13', list: 'L2', fig: 'Fig. 13', topic: 'Análise Nodal com 3 fontes de tensão (12 V, 8 V, 16 V)', diff: 'Médio', time: '20 min', prio: 2, tags: ['gemeo'], note: 'Mesmo circuito da L3 Q14.' },
+      { id: 'L2 Q14', list: 'L2', fig: 'Fig. 14', topic: 'Análise Nodal em rede de 3 nós com 12 V e 2 mA', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Consolidação de sistema nodal 2×2.' },
+      { id: 'L2 Q15', list: 'L2', fig: 'Fig. 15', topic: 'Análise Nodal com 4 fontes independentes (6 V, 12 V, 12 mA, 4 mA)', diff: 'Médio', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Circuito extenso trabalhado no Dia 18.' },
+      { id: 'L2 Q16', list: 'L2', fig: 'Fig. 16', topic: 'Análise Nodal com 4 fontes de tensão (6 V, 12 V, 2 V, 4 V)', diff: 'Médio', time: '22 min', prio: 3, tags: ['adiar_sub'], note: 'Reserva de revisão de P2 na Etapa 2.' },
+      { id: 'L2 Q17', list: 'L2', fig: 'Fig. 17', topic: 'Análise Nodal com fonte de 2 V e 12 mA', diff: 'Médio', time: '20 min', prio: 3, tags: ['adiar_sub'], note: 'Reserva para Substitutiva.' },
+      { id: 'L2 Q18', list: 'L2', fig: 'Fig. 18', topic: 'Análise Nodal com fonte dependente de tensão 4Vx', diff: 'Médio', time: '20 min', prio: 1, tags: ['sem_consulta'], note: 'Indispensável para tratar fontes dependentes na P3.' },
+      { id: 'L2 Q19', list: 'L2', fig: 'Fig. 19', topic: 'Análise Nodal com fonte controlada por corrente 4Ix', diff: 'Médio', time: '22 min', prio: 2, tags: [], note: 'Usada no Simulado Oficial da Substitutiva (Dia 20).' },
+      { id: 'L2 Q20', list: 'L2', fig: 'Fig. 20', topic: 'Análise Nodal com fonte dependente 2Vx, 6 V e 4 mA', diff: 'Médio', time: '20 min', prio: 1, tags: ['gemeo'], note: 'Mesmo circuito da L3 Q28; validada no Dia 8.' },
+      { id: 'L2 Q21', list: 'L2', fig: 'Fig. 21', topic: 'Análise Nodal (30 V, 80 V, 10 mA; misto 5 kΩ e 500 Ω)', diff: 'Médio', time: '22 min', prio: 3, tags: ['adiar_sub'], note: 'Atenção: converter 500 Ω para 0,5 kΩ.' },
+      { id: 'L2 Q22', list: 'L2', fig: 'Fig. 22', topic: 'Análise Nodal com Supernó de 4 V e fonte 2vx', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Compacta e excelente para consolidar Supernó + FCCT (Dia 18).' },
+      { id: 'L2 Q23', list: 'L2', fig: 'Fig. 23', topic: 'Potência na fonte de 20 V via Nodal com 2 fontes dep.', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: 'Alta carga algébrica; adiada para Etapa 2.' },
+      { id: 'L2 Q24', list: 'L2', fig: 'Fig. 24', topic: 'Tensões nodais V1 a V5 com fontes 2VA e IA', diff: 'Difícil', time: '35 min', prio: 3, tags: ['gemeo', 'adiar_sub'], note: 'Mesma rede da L3 Q32; trabalhada no Dia 18.' },
+      { id: 'L2 Q25', list: 'L2', fig: 'Fig. 25', topic: 'Análise de Malhas em 3 malhas (8 V, 12 V, 16 V)', diff: 'Médio', time: '22 min', prio: 1, tags: ['gemeo'], note: 'Mesma topologia base da L3 Q35.' },
+      { id: 'L2 Q26', list: 'L2', fig: 'Fig. 26', topic: 'Análise de Malhas padrão em 2 malhas (6 V e 12 V)', diff: 'Fácil', time: '15 min', prio: 1, tags: ['sem_consulta'], note: 'Melhor introdução à Análise de Malhas (Dia 5).' },
+      { id: 'L2 Q27', list: 'L2', fig: 'Fig. 27', topic: 'Análise de Malhas com fontes de corrente na periferia', diff: 'Fácil', time: '15 min', prio: 1, tags: [], note: 'Ensina o atalho das correntes de malha periféricas fixas.' },
+      { id: 'L2 Q28', list: 'L2', fig: 'Fig. 28', topic: 'Análise de Malhas com Supermalha dupla (2 mA e 4 mA)', diff: 'Médio', time: '22 min', prio: 2, tags: [], note: 'Consolida supermalha com duas fontes de corrente.' },
+      { id: 'L2 Q29', list: 'L2', fig: 'Fig. 29', topic: 'Análise de Malhas com Supermalha simples (12 V e 6 mA)', diff: 'Fácil', time: '18 min', prio: 1, tags: ['sem_consulta'], note: 'Questão-modelo ideal de Supermalha (Dia 6).' },
+      { id: 'L2 Q30', list: 'L2', fig: 'Fig. 30', topic: 'Análise de Malhas com 4 mA, 6 V e 12 V', diff: 'Médio', time: '20 min', prio: 2, tags: ['gemeo'], note: 'Mesmo circuito da L3 Q21 (Norton).' },
+      { id: 'L2 Q31', list: 'L2', fig: 'Fig. 31', topic: 'Análise de Malhas em 4 malhas com 4 mA e 2 mA', diff: 'Médio', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Redução de 4 malhas para 2 equações; Etapa 2.' },
+      { id: 'L2 Q32', list: 'L2', fig: 'Fig. 32', topic: 'Análise de Malhas com fonte dependente de tensão 2Ix', diff: 'Fácil', time: '18 min', prio: 2, tags: [], note: 'Introdução limpa a fontes dependentes em Malhas.' },
+      { id: 'L2 Q33', list: 'L2', fig: 'Fig. 33', topic: 'Potência na fonte de 2 A via Malhas com 2Ix', diff: 'Médio', time: '22 min', prio: 2, tags: [], note: 'Ensina a achar a tensão sobre uma fonte de corrente (Dia 19).' },
+      { id: 'L2 Q34', list: 'L2', fig: 'Fig. 34', topic: 'Análise de Malhas com fonte controlada 4000Ix e 12 mA', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: '4000Ix em mA = 4Ix; usada no Simulado Sub (Dia 20).' },
+      { id: 'L2 Q35', list: 'L2', fig: 'Fig. 35', topic: 'Supermalha com fonte de corrente controlada Ix e 12 mA', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Treinada no Dia 19 (Etapa 2).' },
+      { id: 'L2 Q36', list: 'L2', fig: 'Fig. 36', topic: 'Análise de Malhas com fonte Vx/4000 e 6 mA', diff: 'Médio', time: '22 min', prio: 3, tags: ['adiar_sub'], note: 'Reserva para Etapa 2.' },
+      { id: 'L2 Q37', list: 'L2', fig: 'Fig. 37', topic: 'Análise de Malhas com 12 mA, 4 mA e Vx/1000', diff: 'Difícil', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Adiada para revisão de P2 na Etapa 2.' },
+      { id: 'L2 Q38', list: 'L2', fig: 'Fig. 38', topic: 'Análise de Malhas com duas fontes dependentes (2Vx e Ix)', diff: 'Médio', time: '22 min', prio: 2, tags: [], note: 'Treino de controle acoplado no Dia 19.' },
+      { id: 'L2 Q39', list: 'L2', fig: 'Fig. 39', topic: 'Análise de Malhas em 3 malhas com 12 mA, 4 mA e Ix', diff: 'Difícil', time: '28 min', prio: 3, tags: ['adiar_sub'], note: 'Supermalha com controle cruzado; Etapa 2.' },
+      { id: 'L2 Q40', list: 'L2', fig: 'Fig. 40', topic: 'Potência na fonte controlada 15Ix (com Vx/8 e 3 A)', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: 'Questão avançada para Substitutiva.' },
+      { id: 'L2 Q41', list: 'L2', fig: 'Fig. 41', topic: 'Correntes via Malhas e verificação pelo Teorema de Tellegen', diff: 'Difícil', time: '35 min', prio: 3, tags: ['ponte', 'adiar_sub'], note: 'Integra Malhas + Tellegen completo no Dia 19.' },
+      { id: 'L2 Q42', list: 'L2', fig: 'Fig. 42', topic: 'Correntes via Malhas e verificação por Tellegen (4.3id)', diff: 'Difícil', time: '35 min', prio: 3, tags: ['ponte', 'adiar_sub'], note: 'Similar à Q41; reserva para Substitutiva.' },
+
+      { id: 'L3 Q1', list: 'L3', fig: 'Fig. 1', topic: 'Superposição para achar Vo (fontes de 12 V e 6 mA)', diff: 'Fácil', time: '15 min', prio: 1, tags: ['sem_consulta'], note: 'Exercício inaugural do Dia 1 para aprender Superposição.' },
+      { id: 'L3 Q2', list: 'L3', fig: 'Fig. 2', topic: 'Superposição para achar Io (12 V, 6 V e 6 mA)', diff: 'Médio', time: '20 min', prio: 1, tags: ['gemeo'], note: 'Duplicata exata da Q4; executada no Dia 2.' },
+      { id: 'L3 Q3', list: 'L3', fig: 'Fig. 3', topic: 'Superposição para achar Vo (fontes de 12 V e 6 V)', diff: 'Fácil', time: '15 min', prio: 2, tags: [], note: 'Superposição rápida com duas fontes de tensão.' },
+      { id: 'L3 Q4', list: 'L3', fig: 'Fig. 4', topic: 'Superposição para achar Io (duplicata exata da Q2)', diff: 'Médio', time: '15 min', prio: 2, tags: ['gemeo', 'sem_consulta'], note: 'Usada como teste cego sem consulta no Dia 13.' },
+      { id: 'L3 Q5', list: 'L3', fig: 'Fig. 5', topic: 'Superposição para achar VA (10 V, 10 mA e 2 mA)', diff: 'Médio', time: '22 min', prio: 2, tags: [], note: 'Treina polaridade de VA em cada subcircuito (Dia 3).' },
+      { id: 'L3 Q6', list: 'L3', fig: 'Fig. 6', topic: 'Superposição para achar Io (4 mA, 2 mA e 12 V)', diff: 'Médio', time: '22 min', prio: 2, tags: [], note: 'Questão 1 do Simulado Oficial da P3 (Dia 14).' },
+      { id: 'L3 Q7', list: 'L3', fig: 'Fig. 7', topic: 'Superposição incremental (dado io = 3,5 mA, ligar 5 mA)', diff: 'Médio', time: '15 min', prio: 1, tags: ['ponte', 'sem_consulta'], note: 'Questão conceitual chave de Aditividade (Dia 2).' },
+      { id: 'L3 Q8', list: 'L3', fig: 'Fig. 8', topic: 'Superposição para achar io e vo (2 A e 10 V)', diff: 'Médio', time: '22 min', prio: 2, tags: [], note: 'Cálculo simultâneo de duas variáveis no Dia 3.' },
+      { id: 'L3 Q9', list: 'L3', fig: 'Fig. 9', topic: 'Superposição para achar vo (40 V, 4 A e 2 A)', diff: 'Médio', time: '25 min', prio: 3, tags: ['adiar_sub'], note: 'Questão extra caso sobre tempo.' },
+      { id: 'L3 Q10', list: 'L3', fig: 'Fig. 10', topic: 'Superposição para achar io (6 A, 10 A e 75 V)', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: '3 subcircuitos de 3 malhas; priorizar Q1–Q8.' },
+      { id: 'L3 Q11', list: 'L3', fig: 'Fig. 11', topic: 'Equivalente de Thévenin para achar Vo (6 V e 6 mA)', diff: 'Fácil', time: '18 min', prio: 1, tags: ['sem_consulta'], note: 'Primeiro exercício fundamental de Thévenin Caso 1 (Dia 4).' },
+      { id: 'L3 Q12', list: 'L3', fig: 'Fig. 12', topic: 'Equivalente de Thévenin para achar Vo (12 V e 2 mA)', diff: 'Fácil', time: '18 min', prio: 1, tags: ['sem_consulta'], note: 'Destaca resistor em série com terminal aberto (Dia 4).' },
+      { id: 'L3 Q13', list: 'L3', fig: 'Fig. 13', topic: 'Equivalente de Thévenin para achar Io (12 V e 6 V)', diff: 'Médio', time: '20 min', prio: 1, tags: ['gemeo'], note: 'Mesmo circuito da L2 Q11; carga no ramo central (Dia 5).' },
+      { id: 'L3 Q14', list: 'L3', fig: 'Fig. 14', topic: 'Equivalente de Thévenin para achar Io (12 V, 8 V, 16 V, 2 mA)', diff: 'Médio', time: '22 min', prio: 2, tags: ['gemeo'], note: 'Mesmo circuito da L2 Q13.' },
+      { id: 'L3 Q15', list: 'L3', fig: 'Fig. 15', topic: 'Equivalente de Thévenin para achar Io (18 V, 2 mA, 1 mA)', diff: 'Médio', time: '22 min', prio: 1, tags: ['gemeo', 'sem_consulta'], note: 'Mesmo circuito da L3 Q24 (comparar Thévenin vs. Norton no Dia 6).' },
+      { id: 'L3 Q16', list: 'L3', fig: 'Fig. 16', topic: 'Caixa-preta linear: achar VTh, RTh e VAB (20 kΩ)', diff: 'Médio', time: '15 min', prio: 1, tags: ['ponte', 'sem_consulta'], note: 'Clássica de prova (RTh = 4 kΩ, VTh = 24 V); Dia 5.' },
+      { id: 'L3 Q17', list: 'L3', fig: 'Fig. 17', topic: 'Equivalente de Thévenin entre a-b (10 A, 500 V, 5,2 Ω)', diff: 'Fácil', time: '15 min', prio: 2, tags: [], note: 'Executada na revisão sem consulta do Dia 13.' },
+      { id: 'L3 Q18', list: 'L3', fig: 'Fig. 18', topic: 'Thévenin entre a-b com 100 V, 5000i1 e 10⁻³v2', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: 'Duas fontes dependentes acopladas; converter 625 Ω = 0,625 kΩ.' },
+      { id: 'L3 Q19', list: 'L3', fig: 'Fig. 19', topic: 'Thévenin sem fonte independente (apenas 250·iΔ)', diff: 'Médio', time: '20 min', prio: 1, tags: ['sem_consulta'], note: 'Obrigatória: VTh = 0, achar RTh com fonte de teste (Dia 7).' },
+      { id: 'L3 Q20', list: 'L3', fig: 'Fig. 20', topic: 'Thévenin sem fonte independente (apenas 13·ix)', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Questão 2A do Simulado Oficial da P3 (Dia 14).' },
+      { id: 'L3 Q21', list: 'L3', fig: 'Fig. 21', topic: 'Equivalente de Norton para achar Vo (14 mA, 6 V, 12 V)', diff: 'Médio', time: '20 min', prio: 1, tags: ['gemeo', 'sem_consulta'], note: 'Mesmo circuito da L2 Q30; questão-chave de Norton (Dia 6).' },
+      { id: 'L3 Q22', list: 'L3', fig: 'Fig. 22', topic: 'Equivalente de Norton para achar Vo (24 V e 2 mA)', diff: 'Fácil', time: '18 min', prio: 2, tags: [], note: 'Consolida corrente de curto IN no Dia 6.' },
+      { id: 'L3 Q23', list: 'L3', fig: 'Fig. 23', topic: 'Norton entre a-b sem fonte indep. (250·ix e 1.5·ix)', diff: 'Médio', time: '22 min', prio: 3, tags: [], note: 'Trabalhada no Dia 7 com fonte de teste.' },
+      { id: 'L3 Q24', list: 'L3', fig: 'Fig. 24', topic: 'Equivalente de Norton para achar Io (mesma rede da Q15)', diff: 'Médio', time: '20 min', prio: 2, tags: ['gemeo'], note: 'Confirma IN = VTh/RTh no Dia 6.' },
+      { id: 'L3 Q25', list: 'L3', fig: 'Fig. 25', topic: 'Equivalente de Norton para achar Io (2 mA, 2 V, 4 V)', diff: 'Médio', time: '20 min', prio: 3, tags: [], note: 'Questão 2B do Simulado Oficial da P3 (Dia 14).' },
+      { id: 'L3 Q26', list: 'L3', fig: 'Fig. 26', topic: 'Thévenin Caso 2 completo (12 V e fonte dependente Vx)', diff: 'Médio', time: '22 min', prio: 1, tags: [], note: 'Thévenin completo com fonte controlada (Dia 8).' },
+      { id: 'L3 Q27', list: 'L3', fig: 'Fig. 27', topic: 'Thévenin Caso 2 completo (12 V, 2 mA e fonte Ix)', diff: 'Médio', time: '22 min', prio: 1, tags: ['sem_consulta'], note: 'Representativa dos exemplos de aula; executada no Dia 8.' },
+      { id: 'L3 Q28', list: 'L3', fig: 'Fig. 28', topic: 'Thévenin Caso 2 completo (6 V, 4 mA e fonte 2Vx)', diff: 'Médio', time: '22 min', prio: 1, tags: ['gemeo', 'sem_consulta'], note: 'Mesmo circuito da L2 Q20; validada no Dia 8.' },
+      { id: 'L3 Q29', list: 'L3', fig: 'Fig. 29', topic: 'Thévenin Caso 2 avançado (12 V, 4 mA, 2 mA e 2Vx)', diff: 'Difícil', time: '28 min', prio: 3, tags: [], note: 'Executada na revisão sem consulta do Dia 13.' },
+      { id: 'L3 Q30', list: 'L3', fig: 'Fig. 30', topic: 'Thévenin Caso 2 avançado (variação da Q29)', diff: 'Difícil', time: '28 min', prio: 3, tags: ['adiar_sub'], note: 'Reserva de treino para Etapa 2.' },
+      { id: 'L3 Q31', list: 'L3', fig: 'Fig. 31', topic: 'Thévenin entre A–B sem fonte indep. (fonte Vx/1000)', diff: 'Médio', time: '18 min', prio: 2, tags: ['sem_consulta'], note: 'Treina FCCT em mA/V no Dia 7.' },
+      { id: 'L3 Q32', list: 'L3', fig: 'Fig. 32', topic: 'Thévenin entre A–B em rede de 4 malhas (2VA e IA)', diff: 'Difícil', time: '32 min', prio: 3, tags: ['gemeo', 'adiar_sub'], note: 'Mesma rede da L2 Q24; trabalhada no Dia 18.' },
+      { id: 'L3 Q33', list: 'L3', fig: 'Fig. 33', topic: 'Valor de RL para máxima transferência de potência (12 V)', diff: 'Fácil', time: '12 min', prio: 2, tags: [], note: 'Fixação rápida de RL = RTh no Dia 9.' },
+      { id: 'L3 Q34', list: 'L3', fig: 'Fig. 34', topic: 'Valor de RL e potência máxima pmax (fonte 4 mA)', diff: 'Fácil', time: '18 min', prio: 1, tags: ['sem_consulta'], note: 'Exercício padrão completo de pmax = VTh²/(4RTh) (Dia 9).' },
+      { id: 'L3 Q35', list: 'L3', fig: 'Fig. 35', topic: 'RL e pmax em rede de 3 malhas (8 V, 12 V, 6 V)', diff: 'Médio', time: '22 min', prio: 2, tags: ['gemeo'], note: 'Mesma topologia da L2 Q25; executada no Dia 9.' },
+      { id: 'L3 Q36', list: 'L3', fig: 'Fig. 36', topic: 'RL e pmax com fonte dependente 4Vx/1000 e 1 mA', diff: 'Médio', time: '25 min', prio: 1, tags: ['ponte', 'sem_consulta'], note: 'Integra Thévenin Caso 2 + pmax (Dia 9 e Simulado P3).' },
+      { id: 'L3 Q37', list: 'L3', fig: 'Fig. 37', topic: 'Ajuste de Ro para pmax e cálculo de potência (60 V, 15 mA)', diff: 'Médio', time: '22 min', prio: 3, tags: [], note: 'Treinada sem consulta no Dia 13.' },
+      { id: 'L3 Q38', list: 'L3', fig: 'Fig. 38', topic: 'Pegadinha: Ro que maximiza potência no resistor FIXO 6 Ω', diff: 'Médio', time: '15 min', prio: 2, tags: [], note: 'Resposta: Ro = 0 Ω (para maximizar corrente em 6 Ω); Dia 9.' },
+      { id: 'L3 Q39', list: 'L3', fig: 'Fig. 39', topic: 'Ro para pmax e % da potência fornecida (3iΔ, 0.1vΔ)', diff: 'Difícil', time: '35 min', prio: 3, tags: ['ponte', 'adiar_sub'], note: 'Questão longa usada no Simulado Sub (Dia 20).' },
+      { id: 'L3 Q40', list: 'L3', fig: 'Fig. 40', topic: 'Valor de Ro para absorver 250 W (200 V e 30ix)', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: 'Aprofundamento algébrico no Dia 20.' },
+      { id: 'L3 Q41', list: 'L3', fig: 'Fig. 41', topic: 'Tensão de saída vo em Amp-Op simples (5 V e 2 V)', diff: 'Fácil', time: '12 min', prio: 1, tags: [], note: 'Primeira questão obrigatória de curto virtual no Dia 10.' },
+      { id: 'L3 Q42', list: 'L3', fig: 'Fig. 42', topic: 'Tensão vo e corrente de saída io em Amp-Op com 1 V', diff: 'Fácil', time: '18 min', prio: 1, tags: ['sem_consulta'], note: 'Clássica de prova cobrando vo e io (Dia 10 e Véspera).' },
+      { id: 'L3 Q43', list: 'L3', fig: 'Fig. 43', topic: 'Tensão vo em Amp-Op alimentado por fonte de 5 mA', diff: 'Médio', time: '18 min', prio: 1, tags: [], note: 'Amp-Op excitado por fonte de corrente (Dia 10).' },
+      { id: 'L3 Q44', list: 'L3', fig: 'Fig. 44', topic: 'Equivalente de Thévenin entre terminais a-b de Amp-Op', diff: 'Médio', time: '20 min', prio: 1, tags: ['ponte', 'sem_consulta'], note: 'Questão-ponte integrando Thévenin + Amp-Op (Dia 11).' },
+      { id: 'L3 Q45', list: 'L3', fig: 'Fig. 45', topic: 'Corrente de saída io em Amp-Op com realimentação múltipla', diff: 'Médio', time: '20 min', prio: 2, tags: [], note: 'Questão 4 do Simulado Oficial da P3 (Dia 14).' },
+      { id: 'L3 Q46', list: 'L3', fig: 'Fig. 46', topic: 'Ganho de malha fechada literal (vo/vs) com R1..Rf', diff: 'Médio', time: '20 min', prio: 1, tags: [], note: 'Dedução literal de ganho no Dia 11.' },
+      { id: 'L3 Q47', list: 'L3', fig: 'Fig. 47', topic: 'Tensão vo em Amp-Op com 5 V e 4 resistores', diff: 'Médio', time: '18 min', prio: 2, tags: [], note: 'Aplicação numérica direta da Q46 (Dia 11).' },
+      { id: 'L3 Q48', list: 'L3', fig: 'Fig. 48', topic: 'Corrente ix e tensão vo com entrada de 4 mV', diff: 'Médio', time: '20 min', prio: 1, tags: [], note: 'Precisão com milivolts e microampères (Dia 10).' },
+      { id: 'L3 Q49', list: 'L3', fig: 'Fig. 49', topic: 'Expressão literal de vo em termos de v1, v2 e v3', diff: 'Médio', time: '20 min', prio: 1, tags: ['sem_consulta'], note: 'Sintetiza somador e diferencial no Dia 11.' },
+      { id: 'L3 Q50', list: 'L3', fig: 'Fig. 50', topic: 'Tensão vo em 2 Amp-Ops em cascata (entrada 5 mV)', diff: 'Médio', time: '22 min', prio: 1, tags: ['sem_consulta'], note: 'Essencial para circuitos multiestágio (Dia 12).' },
+      { id: 'L3 Q51', list: 'L3', fig: 'Fig. 51', topic: 'Demonstração algébrica do ganho em 2 Amp-Ops simétricos', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: 'Demonstração longa; adiada para Etapa 2.' },
+      { id: 'L3 Q52', list: 'L3', fig: 'Fig. 52', topic: 'Expressão de vo em função de vs1 e vs2 (2 Amp-Ops)', diff: 'Médio', time: '25 min', prio: 2, tags: [], note: 'Treinada sem consulta no Dia 13.' },
+      { id: 'L3 Q53', list: 'L3', fig: 'Fig. 53', topic: 'Ganho de malha fechada numérico (vo/vi)', diff: 'Médio', time: '22 min', prio: 3, tags: [], note: 'Realimentação acoplada trabalhada no Dia 12.' },
+      { id: 'L3 Q54', list: 'L3', fig: 'Fig. 54', topic: 'Ganho de malha fechada literal com 2 Amp-Ops', diff: 'Difícil', time: '30 min', prio: 3, tags: ['adiar_sub'], note: 'Reserva algébrica para Substitutiva.' },
+      { id: 'L3 Q55', list: 'L3', fig: 'Fig. 55', topic: 'Tensão vo com 2 Amp-Ops e fontes de 2 V e 3 V', diff: 'Médio', time: '25 min', prio: 2, tags: [], note: 'Questão numérica completa de 2 estágios (Dia 12).' },
+      { id: 'L3 Q56', list: 'L3', fig: 'Fig. 56', topic: 'Tensão vo em sistema modular com 3 Amp-Ops (A, B, C)', diff: 'Difícil', time: '28 min', prio: 2, tags: [], note: 'Resolver A e B independentemente e injetar em C (Dia 12).' }
+    ];
+
+    const sequencesData = [
+      {
+        title: 'Sequência 1 • Do Circuito Resistivo à Superposição e Linearidade',
+        base: 'Lei de Ohm (v=Ri), curto-circuito (R=0, v=0), circuito aberto (R→∞, i=0), série/paralelo e divisores (P1).',
+        inter: 'Propriedades de homogeneidade e aditividade; desativação de fontes independentes (tensão → curto; corrente → aberto).',
+        p3: 'Princípio da Superposição (Lista 3, Q1 a Q10) • Dias 01 a 03.',
+        skill: 'Decompor N fontes em N subcircuitos, respeitar sinais de referência de Vo/Io e somar algebricamente.'
+      },
+      {
+        title: 'Sequência 2 • De Kirchhoff e Sistemas Lineares a Thévenin e Norton (Caso 1)',
+        base: 'LKC, LKT, identificação de nós/malhas e associação de resistores (P1).',
+        inter: 'Análise Nodal, Análise de Malhas (P2) e Transformação de Fontes (vs = is·R).',
+        p3: 'Teoremas de Thévenin (VTh, RTh) e Norton (IN, RN) sem fontes dependentes (L3 Q11–Q17, Q21, Q22, Q24) • Dias 04 a 06.',
+        skill: 'Isolar a carga a-b, achar RTh por redução, calcular VTh (aberto) ou IN (curto) e reconectar a carga.'
+      },
+      {
+        title: 'Sequência 3 • De Fontes Controladas a Thévenin e Norton (Caso 2)',
+        base: 'Os 4 modelos de fontes dependentes (Aula 2) e equações auxiliares Vx, Ix (P2).',
+        inter: 'Manutenção obrigatória das fontes dependentes ativas + método da fonte de teste externa (Vin ou Iin) nos terminais a-b.',
+        p3: 'Equivalentes de Thévenin e Norton com fontes controladas (L3 Q18–Q20, Q23, Q26–Q32) • Dias 07 e 08.',
+        skill: 'Expressar variáveis de controle em função dos nós/malhas, calcular RTh = Vin/Iin (inclusive RTh < 0) ou RTh = VTh/IN.'
+      },
+      {
+        title: 'Sequência 4 • Do Dipolo de Thévenin à Máxima Transferência de Potência',
+        base: 'Potência em resistores (p = i²R = v²/R) e divisor de tensão (P1).',
+        inter: 'Substituição de toda a rede fixa por VTh em série com RTh conectado à carga variável RL.',
+        p3: 'Teorema da Máxima Transferência de Potência (Lista 3, Q33 a Q40) • Dia 09.',
+        skill: 'Igualar RL = RTh e aplicar pmax = VTh² / (4·RTh), identificando exceções quando a carga alvo é fixa (Q38).'
+      },
+      {
+        title: 'Sequência 5 • Da Análise Nodal aos Amplificadores Operacionais Ideais',
+        base: 'LKC (∑ik = 0) e Lei de Ohm nodal i = (Va - Vb)/R (P1 e P2).',
+        inter: 'Restrições ideais com realimentação negativa: curto-circuito virtual (v- = v+) e corrente de entrada nula (i- = i+ = 0).',
+        p3: 'Amplificadores Operacionais de 1, 2 e 3 estágios (Lista 3, Q41 a Q56) • Dias 10 a 12.',
+        skill: 'Propagar v+ para v- e escrever LKC exclusivamente nos nós de entrada (aplicando LKC na saída só para achar io).'
+      }
+    ];
+
+    const manualTopics = {
+      mod1: `
+        <h3 class="text-base font-bold text-stone-900">Módulo 1: Convenção Passiva, Lei de Ohm, Divisores e Transformação Δ ↔ Y</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+            <h4 class="font-bold text-teal-800 text-xs uppercase">1. Convenção Passiva &amp; Casos Limite</h4>
+            <p class="text-xs">• Corrente entra pelo terminal <strong>+</strong>: <code>p = +v·i</code>. Entra pelo <strong>-</strong>: <code>p = -v·i</code>.</p>
+            <p class="text-xs">• <code>p &gt; 0</code>: elemento <strong>absorve/consome</strong> potência. <code>p &lt; 0</code>: <strong>fornece</strong> potência.</p>
+            <p class="text-xs">• <strong>Curto-circuito (R = 0):</strong> <code>v = 0</code> sempre; corrente <code>i</code> é livre (ditada pela LKC).</p>
+            <p class="text-xs">• <strong>Circuito aberto (R → ∞):</strong> <code>i = 0</code> sempre; tensão <code>v</code> é livre (ditada pela LKT).</p>
+          </div>
+          <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+            <h4 class="font-bold text-teal-800 text-xs uppercase">2. Divisores de Tensão e de Corrente</h4>
+            <div class="formula-box p-2.5 rounded text-xs">
+              Divisor de Tensão (Série): v_R1 = [ R1 / (R1 + R2) ] · v_total
+            </div>
+            <div class="formula-box p-2.5 rounded text-xs">
+              Divisor de Corrente (Paralelo): i_R1 = [ R2 / (R1 + R2) ] · i_total
+            </div>
+            <p class="text-xs text-stone-500">Atenção: Divisor de corrente para 2 ramos usa o <strong>OUTRO resistor (R2)</strong> no numerador!</p>
+          </div>
+        </div>
+        <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+          <h4 class="font-bold text-teal-800 text-xs uppercase">3. Transformação Estrela–Triângulo (Δ ↔ Y • Aula 4, Slides 45–47)</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div class="formula-box p-2.5 rounded">
+              <strong>Δ → Y (Produto dos adjacentes / Soma Δ):</strong><br/>
+              Ra = (R1·R2) / (R1 + R2 + R3)<br/>
+              Rb = (R2·R3) / (R1 + R2 + R3)<br/>
+              Rc = (R1·R3) / (R1 + R2 + R3)
+            </div>
+            <div class="formula-box p-2.5 rounded">
+              <strong>Y → Δ (Soma dos produtos 2 a 2 / Oposto Y):</strong><br/>
+              S = Ra·Rb + Rb·Rc + Ra·Rc<br/>
+              R1 = S / Rb &nbsp;|&nbsp; R2 = S / Rc &nbsp;|&nbsp; R3 = S / Ra<br/>
+              <em>Caso simétrico: RY = RΔ / 3 e RΔ = 3·RY</em>
+            </div>
+          </div>
+        </div>
+      `,
+      mod2: `
+        <h3 class="text-base font-bold text-stone-900">Módulo 2: Algoritmos Completos de Análise Nodal e Análise de Malhas</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2 text-xs">
+            <h4 class="font-bold text-teal-800 uppercase">Algoritmo de Análise Nodal &amp; Supernó</h4>
+            <p><strong>1. Nó de Referência (0 V):</strong> Escolha o nó com mais ramos ou ligado ao maior número de fontes de tensão.</p>
+            <p><strong>2. Nó Padrão (k):</strong> Some todas as correntes saindo do nó k:<br/><code>∑ (Vk - Vvizinho)/R + ∑ I_fontes_saindo - ∑ I_fontes_entrando = 0</code>.</p>
+            <p><strong>3. Fonte de Tensão no Terra:</strong> Não escreva LKC; o potencial é imediato (<code>Vk = ±Vfonte</code>).</p>
+            <p><strong>4. Supernó (Fonte de tensão entre nós a e b):</strong><br/>
+            • <em>Eq. de Restrição:</em> <code>Va - Vb = Vfonte</code> (sinal + no lado positivo da fonte).<br/>
+            • <em>Eq. Global:</em> Englobar a, b e a fonte numa fronteira e somar todas as correntes que saem de a e de b = 0.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2 text-xs">
+            <h4 class="font-bold text-teal-800 uppercase">Algoritmo de Análise de Malhas &amp; Supermalha</h4>
+            <p><strong>1. Correntes de Malha:</strong> Atribua <code>i1, i2, ...</code> sempre no <strong>sentido horário</strong> em cada janela.</p>
+            <p><strong>2. Malha Padrão (k):</strong> Percorra no sentido horário aplicando LKT:<br/><code>+R·ik</code> (exclusivos) + <code>R·(ik - ivizinha)</code> (compartilhados) + <code>∑ Vfontes</code> (sinal de entrada na fonte) = 0.</p>
+            <p><strong>3. Fonte de Corrente na Periferia:</strong> Não escreva LKT; <code>ik = ±Ifonte</code> diretamente.</p>
+            <p><strong>4. Supermalha (Fonte de corrente entre malhas a e b):</strong><br/>
+            • <em>Eq. de Restrição:</em> <code>ib - ia = Ifonte</code> (ib no mesmo sentido da seta).<br/>
+            • <em>Eq. Global:</em> Abra mentalmente o ramo da fonte de corrente e aplique LKT no contorno unificado das malhas a e b.</p>
+          </div>
+        </div>
+      `,
+      mod3_th: `
+        <h3 class="text-base font-bold text-stone-900">Módulo 3: Superposição, Thévenin, Norton e Máxima Transferência de Potência</h3>
+        <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2 text-xs">
+          <h4 class="font-bold text-teal-800 uppercase">1. Regras da Superposição (Slides 11–15)</h4>
+          <p>• Para anular <strong>Fonte de Tensão Independente</strong> → substitua por <strong>Curto-Circuito</strong> (fio).</p>
+          <p>• Para anular <strong>Fonte de Corrente Independente</strong> → substitua por <strong>Circuito Aberto</strong> (apague o ramo).</p>
+          <p>• <strong>Fonte Dependente NUNCA é desligada!</strong> Nunca some potências parciais (<code>p ≠ p1 + p2</code>); some tensões/correntes primeiro.</p>
+        </div>
+        <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2 text-xs">
+          <h4 class="font-bold text-teal-800 uppercase">2. Roteiro Unificado de Thévenin, Norton e Máxima Potência</h4>
+          <p><strong>Passo 1:</strong> Remova a carga e nomeie os terminais como <code>a</code> e <code>b</code>.</p>
+          <p><strong>Passo 2 (VTh):</strong> Em circuito aberto (<code>Iab = 0</code>), calcule <code>VTh = Va - Vb</code>.</p>
+          <p><strong>Passo 3 (IN):</strong> Feche um curto entre <code>a</code> e <code>b</code> e calcule a corrente <code>IN = Iab</code> descendo de <code>a</code> para <code>b</code>.</p>
+          <p><strong>Passo 4 (RTh = RN):</strong><br/>
+          • <em>Caso 1 (Sem fonte dep.):</em> Anule fontes independentes e reduza os resistores vistos entre <code>a</code> e <code>b</code>.<br/>
+          • <em>Caso 2 (Com fonte dep.):</em> Anule só as fontes independentes, conecte fonte de teste <code>Vin = 1 V</code> (+ em a) e calcule <code>RTh = Vin / Iin</code> (ou use <code>RTh = VTh / IN</code> se VTh ≠ 0).</p>
+          <div class="formula-box p-2.5 rounded mt-2">
+            Carga: Io = VTh / (RTh + RL) &nbsp;|&nbsp; Máxima Potência: RL = RTh &nbsp;⇒&nbsp; p_max = VTh² / (4 · RTh)
+          </div>
+        </div>
+      `,
+      mod3_opamp: `
+        <h3 class="text-base font-bold text-stone-900">Módulo 3: Guia Completo de Amplificadores Operacionais Ideais (L3 Q41 a Q56)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="p-4 rounded-xl bg-teal-50 border border-teal-200 space-y-2">
+            <h4 class="font-bold text-teal-900 uppercase">As Duas Regras de Ouro (Realimentação Negativa)</h4>
+            <p><strong>1. Curto-Circuito Virtual de Tensão:</strong> <code>v- = v+</code> (os dois terminais de entrada possuem o mesmo potencial nodal).</p>
+            <p><strong>2. Circuito Aberto Virtual de Corrente:</strong> <code>i- = 0</code> e <code>i+ = 0</code> (nenhuma corrente entra nos pinos + ou - do Amp-Op).</p>
+            <p class="text-rose-700 font-semibold pt-1">⚠️ Regra de Segurança: Nunca aplique LKC no nó de saída (vo) para tentar achar vo! Só aplique LKC na saída se o enunciado pedir a corrente io APÓS já ter achado vo.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+            <h4 class="font-bold text-teal-800 uppercase">Configurações Clássicas por LKC Nodal</h4>
+            <div class="formula-box p-2 rounded">
+              <strong>Inversor (v+ = 0 ⇒ v- = 0):</strong><br/>
+              (0 - vi)/R1 + (0 - vo)/Rf = 0 ⇒ vo = -(Rf / R1)·vi
+            </div>
+            <div class="formula-box p-2 rounded">
+              <strong>Não-Inversor (v+ = vi ⇒ v- = vi):</strong><br/>
+              (vi - 0)/R1 + (vi - vo)/Rf = 0 ⇒ vo = (1 + Rf / R1)·vi
+            </div>
+            <p>Em circuitos com <strong>2 ou 3 Amp-Ops em cascata</strong> (Q50, Q55, Q56), resolva da esquerda para a direita tratando a saída de cada estágio como fonte de tensão ideal para o próximo.</p>
+          </div>
+        </div>
+      `,
+      decision: `
+        <h3 class="text-base font-bold text-stone-900">Matriz de Decisão de Método &amp; Blindagem contra os 5 Erros Clássicos</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-stone-100 text-stone-700 border-b border-stone-200">
+                <th class="py-2 px-3 font-semibold">Característica Topológica do Circuito</th>
+                <th class="py-2 px-3 font-semibold">Método Mais Rápido</th>
+                <th class="py-2 px-3 font-semibold">Justificativa Técnica</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-200">
+              <tr><td class="py-2 px-3">1 fonte e resistores em série/paralelo</td><td class="py-2 px-3 font-bold text-teal-700">Redução + Divisores</td><td class="py-2 px-3">Resolve sem sistemas lineares.</td></tr>
+              <tr><td class="py-2 px-3">Várias malhas, mas apenas 2 nós essenciais</td><td class="py-2 px-3 font-bold text-teal-700">Análise Nodal</td><td class="py-2 px-3">Reduz 3–4 malhas a apenas 1 equação.</td></tr>
+              <tr><td class="py-2 px-3">Fontes de tensão ligadas ao fio inferior</td><td class="py-2 px-3 font-bold text-teal-700">Nodal (Terra no fio inferior)</td><td class="py-2 px-3">Elimina incógnitas nodais imediatamente.</td></tr>
+              <tr><td class="py-2 px-3">2–3 janelas e fontes de corrente nas bordas</td><td class="py-2 px-3 font-bold text-teal-700">Análise de Malhas</td><td class="py-2 px-3">Correntes periféricas já saem prontas.</td></tr>
+              <tr><td class="py-2 px-3">Carga variável RL ou cálculo de pmax</td><td class="py-2 px-3 font-bold text-teal-700">Teorema de Thévenin</td><td class="py-2 px-3">Aplica RL = RTh e pmax = VTh²/(4RTh).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-1.5 text-xs text-rose-950">
+          <h4 class="font-bold text-rose-800 uppercase">🛡️ Blindagem contra os 5 Erros Mais Recorrentes em Prova</h4>
+          <p><strong>1. Misturar Ω com kΩ:</strong> Converta 500 Ω → 0,5 kΩ (L2 Q21) e 625 Ω → 0,625 kΩ (L3 Q18) antes de equacionar.</p>
+          <p><strong>2. Transresistência em Ω:</strong> Em circuitos em kΩ e mA, <code>4000·Ix</code> equivale a <code>4·Ix</code> (kΩ × mA = V) e <code>Vx/1000</code> equivale a <code>1·Vx</code> em mA.</p>
+          <p><strong>3. Trocar numerador no Divisor de Corrente:</strong> Divisor de tensão usa o próprio resistor; divisor de corrente usa o <strong>outro</strong> resistor.</p>
+          <p><strong>4. Sinal ao mover fonte dependente:</strong> Confira duas vezes a troca de sinal ao passar <code>2Vx</code> ou <code>4Ix</code> para o lado esquerdo do sistema.</p>
+          <p><strong>5. Esquecer o fator 4 na Potência Máxima:</strong> A fórmula é <code>pmax = VTh² / (4·RTh)</code> (e não VTh²/RTh).</p>
+        </div>
+      `
+    };
+
+    const stuckProtocolData = [
+      {
+        stage: '1. Interpretação ou Topologia',
+        symptom: 'Não sabe por onde começar ou quem está em série/paralelo',
+        clue1: 'Pinte cada nó (fios sem componente) com uma letra (A, B, C, D). Paralelo exige o mesmo par de letras; série exige nó exclusivo.',
+        clue2: 'Em Thévenin/Norton/Máx. Potência, apague primeiro o resistor de carga e desenhe os terminais abertos a e b.',
+        action: 'Retomar por +10 min usando rotulagem de nós.'
+      },
+      {
+        stage: '2. Fonte Dependente (Sobrou Vx ou Ix)',
+        symptom: 'Ficou com mais incógnitas do que equações no sistema',
+        clue1: 'Escreva uma equação auxiliar expressando Vx ou Ix em função das tensões nodais (V1, V2) ou correntes de malha (i1, i2).',
+        clue2: 'Nunca reutilize o valor numérico de Vx do circuito aberto (VTh) dentro do circuito de curto-circuito (IN)!',
+        action: 'Substituir a equação auxiliar no sistema.'
+      },
+      {
+        stage: '3. Montagem de Supernó ou Supermalha',
+        symptom: 'Fonte de tensão entre nós ou fonte de corrente entre malhas',
+        clue1: 'Não tente adivinhar a corrente numa fonte de tensão nem a tensão numa fonte de corrente. Englobe a fonte numa fronteira.',
+        clue2: 'Escreva 2 equações: (1) Restrição interna da fonte (Va - Vb = Vs ou ib - ia = Is); (2) LKC/LKT global ao redor da fronteira.',
+        action: 'Consultar Seção 10.2/10.3 e concluir montagem.'
+      },
+      {
+        stage: '4. Álgebra ou Contas Longas',
+        symptom: 'Equações montadas, mas frações extensas ou erro aritmético',
+        clue1: 'Multiplique a equação inteira pelo maior resistor (ex.: 6 kΩ ou 12 kΩ) para eliminar todas as frações antes de isolar incógnitas.',
+        clue2: 'Verifique se os termos cruzados da matriz (ex.: -1/R_compartilhado) estão simétricos em redes sem fontes dependentes.',
+        action: 'Usar até +15 min da Margem Flexível se houver avanço.'
+      }
+    ];
+
+    const masteryBlocks = [
+      { id: 'm1', axis: '1. Base P1/P2 (Cat. A)', topic: 'Lei de Ohm, Curto/Aberto, Série/Paralelo e Divisores', thermo: 'L1 Q22, L1 Q25, L1 Q35', tip: 'Não trocar R1 por R2 no divisor de corrente • Dias 01–02' },
+      { id: 'm2', axis: '1. Base P1/P2 (Cat. A)', topic: 'Leis de Kirchhoff (LKC e LKT) e Fontes Dependentes', thermo: 'L1 Q7, L1 Q13, L1 Q18', tip: 'Sinais de entrada/saída em LKC e queda em LKT • Dias 02 e 07' },
+      { id: 'm3', axis: '1. Base P1/P2 (Cat. A)', topic: 'Análise Nodal Padrão, Supernó e Fonte Dependente', thermo: 'L2 Q1, L2 Q8, L2 Q11, L2 Q20', tip: 'Lembrar equação Va - Vb = Vs no Supernó • Dias 03, 04, 08' },
+      { id: 'm4', axis: '1. Base P1/P2 (Cat. A)', topic: 'Análise de Malhas Padrão e Supermalha Básica', thermo: 'L2 Q26, L2 Q27, L2 Q29', tip: 'Sentido da corrente no ramo compartilhado (i1 - i2) • Dias 05–06' },
+      { id: 'm5', axis: '2. Núcleo P3 (Mód. 3)', topic: 'Linearidade, Equivalência de Fontes e Superposição', thermo: 'L3 Q1, L3 Q2/Q4, L3 Q5, L3 Q7', tip: 'Tensão vira curto; corrente vira aberto • Dias 01–03, 13' },
+      { id: 'm6', axis: '2. Núcleo P3 (Mód. 3)', topic: 'Thévenin e Norton — Caso 1 (Fontes Independentes)', thermo: 'L3 Q11, L3 Q13, L3 Q15, L3 Q16, L3 Q21', tip: 'Resistor em série com aberto: i=0 em VTh, conta em RTh • Dias 04–06' },
+      { id: 'm7', axis: '2. Núcleo P3 (Mód. 3)', topic: 'Thévenin e Norton — Caso 2 (Fontes Dependentes)', thermo: 'L3 Q19, L3 Q26, L3 Q27, L3 Q28, L3 Q31', tip: 'Sentido de Iin saindo do + de Vin para achar RTh • Dias 07–08, 14' },
+      { id: 'm8', axis: '2. Núcleo P3 (Mód. 3)', topic: 'Máxima Transferência de Potência (RL = RTh e pmax)', thermo: 'L3 Q33, L3 Q34, L3 Q35, L3 Q36, L3 Q38', tip: 'Fator 4 no denominador: VTh²/(4RTh) e unidade mW • Dias 09, 14' },
+      { id: 'm9', axis: '2. Núcleo P3 (Mód. 3)', topic: 'Amplificadores Operacionais (Estágio Único e Cascata)', thermo: 'L3 Q42, L3 Q44, L3 Q46, L3 Q49, L3 Q50, L3 Q55', tip: 'Nunca aplicar LKC na saída antes de achar vo • Dias 10–12, 14' },
+      { id: 'm10', axis: '3. Etapa 2 (Sub Cat. B/C)', topic: 'Transformações Y–Δ e Δ–Y em Pontes Resistivas', thermo: 'L1 Q24c/d, L1 Q33, L1 Q36, L1 Q37', tip: 'Adjacentes em Δ→Y; resistor oposto em Y→Δ • Dia 16' },
+      { id: 'm11', axis: '3. Etapa 2 (Sub Cat. B/C)', topic: 'Gráficos/Cálculo de Carga, Potência, Energia e Tellegen', thermo: 'L1 Q1, L1 Q3, L1 Q5, L1 Q16', tip: 'Convenção passiva e escala de tempo (ks) • Dia 17' },
+      { id: 'm12', axis: '3. Etapa 2 (Sub Cat. B/C)', topic: 'Nodal e Malhas Avançados (Siemens, 5 Nós, Tellegen)', thermo: 'L2 Q12, L2 Q24, L2 Q33, L2 Q38, L2 Q41', tip: 'Tensão sobre fonte de corrente via LKT • Dias 18–20' }
+    ];
+
+    const masteryCycle = ['Não iniciado', 'Em aprendizagem', 'Em prática', 'Aprendido', 'Precisa de revisão'];
+    const masteryBadgeColors = {
+      'Não iniciado': 'bg-stone-100 text-stone-600 border-stone-300',
+      'Em aprendizagem': 'bg-amber-100 text-amber-800 border-amber-300',
+      'Em prática': 'bg-sky-100 text-sky-800 border-sky-300',
+      'Aprendido': 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      'Precisa de revisão': 'bg-rose-100 text-rose-800 border-rose-300'
+    };
+
+    let gradeChartInstance = null;
+    let scheduleChartInstance = null;
+    let catalogChartInstance = null;
+    let anatomyChartInstance = null;
+
+    function initNavigation() {
+      const navBtns = document.querySelectorAll('.nav-tab');
+      const views = document.querySelectorAll('.view-section');
+      navBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-view');
+          navBtns.forEach(b => {
+            b.classList.remove('tab-btn-active');
+            b.classList.add('tab-btn-inactive');
+          });
+          btn.classList.remove('tab-btn-inactive');
+          btn.classList.add('tab-btn-active');
+
+          views.forEach(v => v.classList.add('hidden'));
+          document.getElementById('view-' + target).classList.remove('hidden');
+
+          if (target === 'schedule' && !scheduleChartInstance) renderScheduleChart();
+          if (target === 'catalog' && !catalogChartInstance) renderCatalogChart();
+          if (target === 'architecture' && !anatomyChartInstance) renderAnatomyChart();
+        });
+      });
+    }
+
+    function initGradeSimulator() {
+      const sP3 = document.getElementById('sliderP3');
+      const sSub = document.getElementById('sliderSub');
+      const vP3 = document.getElementById('valP3');
+      const vSub = document.getElementById('valSub');
+      const avgNoSub = document.getElementById('avgNoSub');
+      const avgWithSub = document.getElementById('avgWithSub');
+      const mencaoBadge = document.getElementById('mencaoBadge');
+      const simDiag = document.getElementById('simDiagnostic');
+
+      const tbody = document.getElementById('scenariosTableBody');
+      tbody.innerHTML = scenariosData.map(row => `
+        <tr class="hover:bg-stone-50">
+          <td class="py-2 px-3 font-bold text-stone-800">${row.p3}</td>
+          <td class="py-2 px-3 font-semibold text-teal-800">${row.mm}</td>
+          <td class="py-2 px-3 text-stone-500">${row.ms}</td>
+          <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[11px] font-medium ${row.badge}">${row.diag}</span></td>
+        </tr>
+      `).join('');
+
+      const ctx = document.getElementById('gradeChart').getContext('2d');
+      const p3Labels = ['2,5', '3,0', '4,0', '5,0', '6,0', '6,5', '7,0', '7,5', '8,0', '8,5', '9,0', '10,0'];
+      const p3Vals = [2.5, 3.0, 4.0, 5.0, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 10.0];
+      const mmCurve = p3Vals.map(x => +(12.5 - x).toFixed(2));
+      const msCurve = p3Vals.map(x => (18.5 - x <= 10 ? +(18.5 - x).toFixed(2) : null));
+
+      gradeChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: p3Labels,
+          datasets: [
+            {
+              label: 'Nota Mín. Sub p/ MM (Média 5,0)',
+              data: mmCurve,
+              borderColor: '#0f766e',
+              backgroundColor: 'rgba(15, 118, 110, 0.12)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.15,
+              pointRadius: 4
+            },
+            {
+              label: 'Nota Mín. Sub p/ MS (Média 7,0)',
+              data: msCurve,
+              borderColor: '#d97706',
+              backgroundColor: 'transparent',
+              borderDash: [6, 4],
+              borderWidth: 2.5,
+              tension: 0.15,
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: commonTooltip,
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Nota Obtida na P3 (02/12/2026)', font: { size: 11, weight: 'bold' } } },
+            y: { min: 0, max: 10, title: { display: true, text: 'Nota Necessária na Substitutiva', font: { size: 11, weight: 'bold' } } }
+          }
+        }
+      });
+
+      function updateSimulator() {
+        const p3 = parseFloat(sP3.value);
+        const sub = parseFloat(sSub.value);
+        vP3.textContent = p3.toFixed(1).replace('.', ',');
+        vSub.textContent = sub.toFixed(1).replace('.', ',');
+
+        const noSub = (2.5 + 0.0 + p3) / 3;
+        avgNoSub.textContent = `${noSub.toFixed(2).replace('.', ',')} (MI - Reprovado)`;
+
+        const notes = [2.5, 0.0, p3].sort((a, b) => a - b);
+        if (sub > notes[0]) notes[0] = sub;
+        const finalAvg = (notes[0] + notes[1] + notes[2]) / 3;
+        avgWithSub.textContent = finalAvg.toFixed(2).replace('.', ',');
+
+        let mencao = 'II • REPROVADO';
+        let badgeCls = 'bg-rose-100 text-rose-800';
+        if (finalAvg >= 9.0) { mencao = 'SS • APROVADO COM LOUVOR'; badgeCls = 'bg-emerald-100 text-emerald-900'; }
+        else if (finalAvg >= 7.0) { mencao = 'MS • APROVADO'; badgeCls = 'bg-emerald-100 text-emerald-800'; }
+        else if (finalAvg >= 5.0) { mencao = 'MM • APROVADO'; badgeCls = 'bg-emerald-100 text-emerald-800'; }
+        else if (finalAvg >= 3.0) { mencao = 'MI • REPROVADO'; badgeCls = 'bg-rose-100 text-rose-800'; }
+
+        mencaoBadge.textContent = mencao;
+        mencaoBadge.className = `px-2.5 py-1 rounded-md text-xs font-bold ${badgeCls}`;
+
+        const reqSub = Math.max(0, 12.5 - p3);
+        if (p3 < 2.5) {
+          simDiag.innerHTML = `Com <strong>P3 = ${p3.toFixed(1).replace('.', ',')}</strong>, mesmo tirando 10,0 na Substitutiva a média máxima seria <strong>${((2.5 + p3 + 10)/3).toFixed(2).replace('.', ',')}</strong> (abaixo de 5,0). Busque pelo menos 2,5 na P3!`;
+        } else if (finalAvg >= 5.0) {
+          simDiag.innerHTML = `<strong>Aprovação garantida neste cenário!</strong> Com P3 = ${p3.toFixed(1).replace('.', ',')}, a nota mínima exigida na Substitutiva para MM é <strong>${reqSub.toFixed(1).replace('.', ',')}</strong> (você simulou ${sub.toFixed(1).replace('.', ',')}).`;
+        } else {
+          simDiag.innerHTML = `Com <strong>P3 = ${p3.toFixed(1).replace('.', ',')}</strong>, você precisa atingir pelo menos <strong>${reqSub.toFixed(1).replace('.', ',')} na Substitutiva</strong> (faltam ${(5.0 - finalAvg).toFixed(2).replace('.', ',')} pts na média).`;
+        }
+      }
+
+      sP3.addEventListener('input', updateSimulator);
+      sSub.addEventListener('input', updateSimulator);
+      updateSimulator();
+    }
+
+    function initSchedule() {
+      const filterBtns = document.querySelectorAll('.stage-filter-btn');
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          appState.stageFilter = btn.getAttribute('data-stage');
+          filterBtns.forEach(b => {
+            b.className = 'stage-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-100 text-stone-700 hover:bg-stone-200';
+          });
+          btn.className = 'stage-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-700 text-white';
+          renderDaysList();
+        });
+      });
+      renderDaysList();
+      renderDayDetail(appState.selectedDay);
+    }
+
+    function renderDaysList() {
+      const container = document.getElementById('daysListContainer');
+      const filtered = daysData.filter(d => appState.stageFilter === 'all' || String(d.stage) === appState.stageFilter);
+      container.innerHTML = filtered.map(d => {
+        const doneCount = d.exercises.filter(ex => appState.completedExercises[ex.id]).length;
+        const totalCount = d.exercises.length;
+        const isSelected = d.day === appState.selectedDay;
+        const stageBadge = d.stage === 1
+          ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800">P3</span>'
+          : '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">SUB</span>';
+
+        return `
+          <button onclick="selectDay(${d.day})" class="w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-2 ${isSelected ? 'border-teal-600 bg-teal-50/70 shadow-sm' : 'border-stone-200 bg-white hover:bg-stone-50'}">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                ${stageBadge}
+                <span class="text-xs font-bold text-stone-900">Dia ${String(d.day).padStart(2, '0')} • ${d.date}</span>
+              </div>
+              <div class="text-xs text-stone-600 truncate mt-0.5">${d.title}</div>
+            </div>
+            <div class="shrink-0 text-right">
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${doneCount === totalCount ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600'}">
+                ${doneCount}/${totalCount}
+              </span>
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    window.selectDay = function(dayNum) {
+      appState.selectedDay = dayNum;
+      saveState();
+      renderDaysList();
+      renderDayDetail(dayNum);
+    };
+
+    function renderDayDetail(dayNum) {
+      const d = daysData.find(x => x.day === dayNum) || daysData[0];
+      const card = document.getElementById('dayDetailCard');
+      card.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-stone-200 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md text-xs font-bold ${d.stage === 1 ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}">
+                ${d.stage === 1 ? 'ETAPA 1 • PREPARAÇÃO P3' : 'ETAPA 2 • PREPARAÇÃO SUBSTITUTIVA'}
+              </span>
+              <span class="text-xs font-semibold text-stone-500">Dia ${String(d.day).padStart(2, '0')} • ${d.date}</span>
+            </div>
+            <h3 class="text-lg font-bold text-stone-900 mt-1">${d.title}</h3>
+          </div>
+          <div class="text-xs bg-stone-100 border border-stone-200 rounded-lg px-3 py-1.5 shrink-0">
+            <strong>Núcleo:</strong> ${d.coreMin} min ${d.flexMin > 0 ? `• <strong>Flexível:</strong> +${d.flexMin} min` : ''}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div class="p-3 rounded-xl bg-stone-50 border border-stone-200">
+            <div class="font-bold text-stone-800 mb-1">🎯 Objetivos de Aprendizagem</div>
+            <p class="text-stone-600 leading-relaxed">${d.obj}</p>
+          </div>
+          <div class="p-3 rounded-xl bg-stone-50 border border-stone-200">
+            <div class="font-bold text-stone-800 mb-1">🔗 Pré-Requisitos Recuperados &amp; Slides</div>
+            <p class="text-stone-600 mb-1"><strong>Base:</strong> ${d.prereq}</p>
+            <p class="text-stone-600"><strong>Consultar:</strong> ${d.slides}</p>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500 mb-2">Checklist de Exercícios do Dia (Marque ao Concluir)</h4>
+          <div class="space-y-2">
+            ${d.exercises.map(ex => {
+              const checked = !!appState.completedExercises[ex.id];
+              return `
+                <label class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${checked ? 'bg-emerald-50/70 border-emerald-200' : 'bg-white border-stone-200 hover:bg-stone-50'}">
+                  <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleDayExercise('${ex.id}')" class="mt-0.5 w-4 h-4 accent-teal-700 rounded cursor-pointer" />
+                  <div class="text-xs">
+                    <div class="font-bold ${checked ? 'line-through text-stone-400' : 'text-stone-900'}">${ex.code}</div>
+                    <div class="${checked ? 'text-stone-400' : 'text-stone-600'}">${ex.desc}</div>
+                  </div>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-950">
+          <strong>⚠️ Revisão &amp; Prevenção de Erros do Dia:</strong> ${d.alert}
+        </div>
+      `;
+    }
+
+    window.toggleDayExercise = function(exId) {
+      appState.completedExercises[exId] = !appState.completedExercises[exId];
+      saveState();
+      renderDaysList();
+      renderDayDetail(appState.selectedDay);
+    };
+
+    function renderScheduleChart() {
+      const ctx = document.getElementById('scheduleChart').getContext('2d');
+      scheduleChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: daysData.map(d => `D${d.day}`),
+          datasets: [
+            {
+              label: 'Núcleo Essencial (min)',
+              data: daysData.map(d => d.coreMin),
+              backgroundColor: daysData.map(d => d.stage === 1 ? '#0f766e' : '#d97706'),
+              borderRadius: 4
+            },
+            {
+              label: 'Margem Flexível (min)',
+              data: daysData.map(d => d.flexMin),
+              backgroundColor: '#d6d3d1',
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: commonTooltip,
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { stacked: true, max: 190, title: { display: true, text: 'Minutos / Dia', font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function renderStagesCards() {
+      const grid = document.getElementById('stagesCardsGrid');
+      grid.innerHTML = pedagogicalStages.map(st => {
+        const diag = appState.diagnosticResults['stage_' + st.id];
+        const status = diag ? diag.masteryLevel : 'Não dominado';
+        const badgeCls = masteryBadgeColors[status] || masteryBadgeColors['Não dominado'];
+        const qCount = questionsCatalog.filter(q => q.etapa === st.id).length;
+        const topicsHtml = st.topics.map(t => '<li>' + t + '</li>').join('');
+        const diagLabel = diag
+          ? 'Diagnóstico: ' + diag.correct + '/' + diag.total + ' (' + diag.scorePct + '%) • ' + diag.attempts + 'x'
+          : 'Diagnóstico: Pendente';
+        const btnLabel = diag ? '↻ Refazer Avaliação Diagnóstica' : '▶ Iniciar Avaliação Diagnóstica';
+
+        return `
+          <div class="bg-white rounded-2xl border border-stone-200 p-5 shadow-sm flex flex-col justify-between space-y-4">
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-teal-100 text-teal-800">${st.code} • ${qCount} questões</span>
+                <span class="px-2 py-0.5 rounded-md text-[11px] font-bold border ${badgeCls}">${status}</span>
+              </div>
+              <h3 class="text-base font-bold text-stone-900">${st.title}</h3>
+              <p class="text-[11px] text-stone-500"><strong>Pré-requisitos:</strong> ${st.prereqText}</p>
+              <ul class="text-xs text-stone-700 space-y-1 list-disc pl-4">${topicsHtml}</ul>
+              <div class="p-2.5 rounded-lg bg-stone-50 border border-stone-200 text-[11px] text-stone-700">${st.example}</div>
+            </div>
+            <div class="pt-2 border-t border-stone-200 space-y-2">
+              <div class="flex items-center justify-between text-[11px] text-stone-500">
+                <span>${diagLabel}</span>
+                <span>Reforço: ${st.remediationExercises.slice(0, 2).join(', ')}</span>
+              </div>
+              <button onclick="openDiagnosticModal(${st.id})" class="w-full py-2 px-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition">
+                ${btnLabel}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function initCatalog() {
+      const toggleAuditBtn = document.getElementById('toggleAuditBtn');
+      const errataBox = document.getElementById('auditErrataBox');
+      const twinsBox = document.getElementById('auditTwinsBox');
+      let showingTwins = false;
+
+      toggleAuditBtn.addEventListener('click', () => {
+        showingTwins = !showingTwins;
+        if (showingTwins) {
+          errataBox.classList.add('hidden');
+          twinsBox.classList.remove('hidden');
+          toggleAuditBtn.textContent = 'Ver 6 Correções de Errata';
+        } else {
+          twinsBox.classList.add('hidden');
+          errataBox.classList.remove('hidden');
+          toggleAuditBtn.textContent = 'Ver Circuitos Gêmeos';
+        }
+      });
+
+      ['qSearchInput', 'qListFilter', 'qPrioFilter', 'qDiffFilter', 'qTagFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('input', renderCatalogTable);
+      });
+      renderCatalogTable();
+    }
+
+    function renderCatalogTable() {
+      const search = document.getElementById('qSearchInput').value.toLowerCase().trim();
+      const listF = document.getElementById('qListFilter').value;
+      const prioF = document.getElementById('qPrioFilter').value;
+      const diffF = document.getElementById('qDiffFilter').value;
+      const tagF = document.getElementById('qTagFilter').value;
+
+      const filtered = questionsCatalog.filter(q => {
+        if (listF !== 'ALL' && q.list !== listF) return false;
+        if (prioF !== 'ALL' && String(q.prio) !== prioF) return false;
+        if (diffF !== 'ALL' && q.diff !== diffF) return false;
+        if (tagF !== 'ALL' && !q.tags.includes(tagF)) return false;
+        if (search) {
+          const hay = `${q.id} ${q.fig} ${q.topic} ${q.note}`.toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        return true;
+      });
+
+      document.getElementById('catalogCountLabel').textContent = `Exibindo ${filtered.length} de ${questionsCatalog.length} questões`;
+      const doneTotal = questionsCatalog.filter(q => appState.completedExercises['cat_' + q.id]).length;
+      document.getElementById('catalogDoneLabel').textContent = `${doneTotal} / 138 marcadas no catálogo`;
+
+      const tbody = document.getElementById('catalogTableBody');
+      tbody.innerHTML = filtered.map(q => {
+        const key = 'cat_' + q.id;
+        const isDone = !!appState.completedExercises[key];
+        const prioBadge = q.prio === 1
+          ? '<span class="px-2 py-0.5 rounded font-bold bg-teal-100 text-teal-800">1. Máxima</span>'
+          : q.prio === 2
+          ? '<span class="px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-800">2. Alta</span>'
+          : '<span class="px-2 py-0.5 rounded font-medium bg-stone-200 text-stone-700">3. Compl.</span>';
+
+        const diffColor = q.diff === 'Fácil' ? 'text-emerald-700' : q.diff === 'Médio' ? 'text-amber-700' : 'text-rose-700';
+
+        return `
+          <tr class="${isDone ? 'bg-emerald-50/40 text-stone-400' : 'hover:bg-stone-50 text-stone-800'}">
+            <td class="py-2 px-2.5 text-center">
+              <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleCatalogQuestion('${key}')" class="w-3.5 h-3.5 accent-teal-700 cursor-pointer" />
+            </td>
+            <td class="py-2 px-2.5 font-bold whitespace-nowrap">
+              ${q.id} <span class="block text-[10px] font-normal text-stone-400">${q.fig}</span>
+            </td>
+            <td class="py-2 px-2.5 font-medium">${q.topic}</td>
+            <td class="py-2 px-2.5 font-semibold ${diffColor}">${q.diff}</td>
+            <td class="py-2 px-2.5 whitespace-nowrap text-stone-500">${q.time}</td>
+            <td class="py-2 px-2.5 whitespace-nowrap">${prioBadge}</td>
+            <td class="py-2 px-2.5 text-stone-600">${q.note}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    window.toggleCatalogQuestion = function(key) {
+      appState.completedExercises[key] = !appState.completedExercises[key];
+      saveState();
+      renderCatalogTable();
+    };
+
+    function renderCatalogChart() {
+      const ctx = document.getElementById('catalogChart').getContext('2d');
+      catalogChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Lista 1 (P1 • 40q)', 'Lista 2 (P2 • 42q)', 'Lista 3 (P3 • 56q)'],
+          datasets: [
+            { label: '1. Prioridade Máxima', data: [10, 11, 23], backgroundColor: '#0f766e', borderRadius: 4 },
+            { label: '2. Prioridade Alta', data: [11, 16, 19], backgroundColor: '#d97706', borderRadius: 4 },
+            { label: '3. Complementar (Etapa 2)', data: [19, 15, 14], backgroundColor: '#a8a29e', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: commonTooltip,
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, max: 60, title: { display: true, text: 'Número de Questões', font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function initArchitecture() {
+      const acc = document.getElementById('sequencesAccordion');
+      acc.innerHTML = sequencesData.map((s, idx) => `
+        <div class="border border-stone-200 rounded-xl overflow-hidden">
+          <button onclick="toggleSeq(${idx})" class="w-full text-left px-4 py-3 bg-stone-50 hover:bg-stone-100 flex items-center justify-between text-xs sm:text-sm font-bold text-stone-900">
+            <span>${s.title}</span>
+            <span class="text-teal-700 font-bold ml-2">+</span>
+          </button>
+          <div id="seqBody_${idx}" class="${idx === 0 ? '' : 'hidden'} p-4 bg-white text-xs space-y-2 border-t border-stone-200">
+            <p><strong class="text-stone-800">1. Conhecimento Anterior (Base):</strong> ${s.base}</p>
+            <p><strong class="text-amber-700">2. Conceito Intermediário:</strong> ${s.inter}</p>
+            <p><strong class="text-teal-700">3. Aplicação Direta na P3:</strong> ${s.p3}</p>
+            <p><strong class="text-emerald-800">4. Habilidade Exigida na Prova:</strong> ${s.skill}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.toggleSeq = function(idx) {
+      const el = document.getElementById('seqBody_' + idx);
+      el.classList.toggle('hidden');
+    };
+
+    function renderAnatomyChart() {
+      const ctx = document.getElementById('anatomyChart').getContext('2d');
+      const rawLabels = [
+        'Leitura e Método',
+        'Análise Topológica',
+        'Montagem Equações',
+        'Álgebra e MMC',
+        'Cálculos Numéricos',
+        'Checagem Física',
+        'Correção de Erros'
+      ];
+      anatomyChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: rawLabels.map(l => wrapLabel(l, 16)),
+          datasets: [{
+            data: [3, 3, 3, 4, 3, 2, 4],
+            backgroundColor: ['#0f766e', '#14b8a6', '#d97706', '#f59e0b', '#57534e', '#78716c', '#dc2626'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: commonTooltip,
+            legend: { position: 'right', labels: { boxWidth: 11, font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    function initManual() {
+      const btns = document.querySelectorAll('.manual-tab-btn');
+      const area = document.getElementById('manualContentArea');
+
+      function setTopic(key) {
+        btns.forEach(b => {
+          b.className = 'manual-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-stone-100 text-stone-700 hover:bg-stone-200';
+        });
+        const active = document.querySelector(`.manual-tab-btn[data-mtopic="${key}"]`);
+        if (active) active.className = 'manual-tab-btn px-3.5 py-2 rounded-lg text-xs font-bold bg-teal-700 text-white';
+        area.innerHTML = manualTopics[key];
+      }
+
+      btns.forEach(b => {
+        b.addEventListener('click', () => setTopic(b.getAttribute('data-mtopic')));
+      });
+      setTopic('mod1');
+
+      const grid = document.getElementById('stuckProtocolGrid');
+      grid.innerHTML = stuckProtocolData.map(item => `
+        <div class="p-4 rounded-xl border border-stone-200 bg-stone-50 space-y-2 text-xs">
+          <div class="font-bold text-teal-800 text-sm">${item.stage}</div>
+          <div class="text-stone-500 italic">Sintoma: ${item.symptom}</div>
+          <div class="p-2.5 rounded-lg bg-white border border-stone-200">
+            <strong>Pista 1 (Conceitual):</strong> ${item.clue1}
+          </div>
+          <div class="p-2.5 rounded-lg bg-white border border-stone-200">
+            <strong>Pista 2 (Procedimental):</strong> ${item.clue2}
+          </div>
+          <div class="font-semibold text-amber-800">Regra de Tempo: ${item.action}</div>
+        </div>
+      `).join('');
+    }
+
+    function initTracker() {
+      renderMasteryTable();
+      document.getElementById('resetProgressBtn').addEventListener('click', () => {
+        appState.masteryStates = {};
+        appState.completedExercises = {};
+        saveState();
+        renderMasteryTable();
+        renderDaysList();
+        renderDayDetail(appState.selectedDay);
+        renderCatalogTable();
+      });
+    }
+
+    function renderMasteryTable() {
+      const tbody = document.getElementById('masteryTableBody');
+      let learnedCount = 0;
+
+      tbody.innerHTML = masteryBlocks.map(b => {
+        const current = appState.masteryStates[b.id] || 'Não iniciado';
+        if (current === 'Aprendido') learnedCount++;
+        const colorCls = masteryBadgeColors[current] || masteryBadgeColors['Não iniciado'];
+
+        return `
+          <tr class="hover:bg-stone-50">
+            <td class="py-2.5 px-3 font-semibold text-stone-600">${b.axis}</td>
+            <td class="py-2.5 px-3 font-bold text-stone-900">${b.topic}</td>
+            <td class="py-2.5 px-3">
+              <button onclick="cycleMastery('${b.id}')" class="px-2.5 py-1 rounded-md text-xs font-bold border transition ${colorCls}">
+                ${current} ↻
+              </button>
+            </td>
+            <td class="py-2.5 px-3 font-mono text-[11px] text-teal-800">${b.thermo}</td>
+            <td class="py-2.5 px-3 text-stone-600">${b.tip}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('masterySummaryText').textContent = `${learnedCount} / 12 Blocos Aprendidos`;
+    }
+
+    window.cycleMastery = function(blockId) {
+      const cur = appState.masteryStates[blockId] || 'Não iniciado';
+      const idx = masteryCycle.indexOf(cur);
+      const next = masteryCycle[(idx + 1) % masteryCycle.length];
+      appState.masteryStates[blockId] = next;
+      saveState();
+      renderMasteryTable();
+    };
+
+    function updateGlobalProgress() {
+      const totalDayTasks = daysData.reduce((acc, d) => acc + d.exercises.length, 0);
+      const doneDayTasks = daysData.reduce((acc, d) => acc + d.exercises.filter(ex => appState.completedExercises[ex.id]).length, 0);
+      const pct = totalDayTasks > 0 ? Math.round((doneDayTasks / totalDayTasks) * 100) : 0;
+      const badge = document.getElementById('globalProgressBadge');
+      if (badge) badge.textContent = `${pct}% (${doneDayTasks}/${totalDayTasks})`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initNavigation();
+      initGradeSimulator();
+      initSchedule();
+      initCatalog();
+      initArchitecture();
+      initManual();
+      initTracker();
+      updateGlobalProgress();
+    });
+  </script>
+</body>
+</html>
